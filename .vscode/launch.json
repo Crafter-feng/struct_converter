@@ -1,0 +1,32 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: parse",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "converter_cli.py",
+            "console": "integratedTerminal",
+            "args": "parse ./test_structs.h"
+        },
+        {
+            "name": "Python Debugger: analyze",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "converter_cli.py",
+            "console": "integratedTerminal",
+            "args": "analyze test_data.c --format json -o result.json"
+        },
+        {
+            "name": "Python Debugger: generate",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "converter_cli.py",
+            "console": "integratedTerminal",
+            "args": "generate"
+        }
+    ]
+}
