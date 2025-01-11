@@ -1,0 +1,4 @@
+include src/struct_converter/templates/c/*.jinja
+include src/struct_converter/templates/python/*.jinja
+include README.md
+include LICENSE 

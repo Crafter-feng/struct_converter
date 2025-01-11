@@ -1,0 +1,37 @@
+/**
+ * @file {{ module_name }}.h
+ * @brief Auto-generated header file
+ */
+
+#ifndef __{{ module_name.upper() }}_H__
+#define __{{ module_name.upper() }}_H__
+
+#include <stdint.h>
+#include <stdbool.h>
+
+{% for enum_name, enum_info in enums.items() %}
+typedef enum {
+    {% for value in enum_info.values %}
+    {{ value.name }} = {{ value.value }},  // {{ value.doc_comment if value.doc_comment else '' }}
+    {% endfor %}
+} {{ enum_name }};
+
+{% endfor %}
+
+{% for struct_name, struct_info in structs.items() %}
+{% if struct_info.doc_comment %}
+/**
+ * {{ struct_info.doc_comment.text }}
+ */
+{% endif %}
+{% if struct_info.metadata.is_packed %}#pragma pack(push, 1){% endif %}
+typedef struct {
+    {% for field in struct_info.fields %}
+    {{ field.type | to_c_type }} {{ field.name }}{{ field | format_array }};  // {{ field.doc_comment if field.doc_comment else '' }}
+    {% endfor %}
+} {{ struct_name }};
+{% if struct_info.metadata.is_packed %}#pragma pack(pop){% endif %}
+
+{% endfor %}
+
+#endif /* __{{ module_name.upper() }}_H__ */ 

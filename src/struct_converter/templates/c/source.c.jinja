@@ -1,0 +1,24 @@
+/**
+ * @file {{ module_name }}.c
+ * @brief Auto-generated source file
+ */
+
+#include "{{ module_name }}.h"
+#include <string.h>
+#include <stdlib.h>
+
+{% for struct_name, struct_info in structs.items() %}
+void init_{{ struct_name }}({{ struct_name }}* obj) {
+    if (!obj) return;
+    memset(obj, 0, sizeof({{ struct_name }}));
+}
+
+void free_{{ struct_name }}({{ struct_name }}* obj) {
+    if (!obj) return;
+    {% for field in struct_info.fields %}
+    {% if field.type.is_pointer %}
+    free(obj->{{ field.name }});
+    {% endif %}
+    {% endfor %}
+}
+{% endfor %} 

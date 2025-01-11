@@ -4,18 +4,48 @@
 // 结构体转换配置
 // 设置为1启用相应结构体的转换功能
 
-#define ENABLE_STRUCT_BITFIELDS_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_COMPLEXDATA_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_CONFIG_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_NESTEDSTRUCT_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_NODE_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_POINT_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_RINGBUFFER_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_STRINGBUILDER_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_STRINGVIEW_CONVERTER 1  // 默认启用
-#define ENABLE_STRUCT_VECTOR_CONVERTER 1  // 默认启用
+#define ENABLE_BITFIELDS_CONVERTER 1  // 默认启用
+#define ENABLE_COMPLEXDATA_CONVERTER 1  // 默认启用
+#define ENABLE_CONFIG_CONVERTER 1  // 默认启用
+#define ENABLE_NESTEDSTRUCT_CONVERTER 1  // 默认启用
+#define ENABLE_NODE_CONVERTER 1  // 默认启用
+#define ENABLE_POINT_CONVERTER 1  // 默认启用
+#define ENABLE_RINGBUFFER_CONVERTER 1  // 默认启用
+#define ENABLE_STRINGBUILDER_CONVERTER 1  // 默认启用
+#define ENABLE_STRINGVIEW_CONVERTER 1  // 默认启用
+#define ENABLE_VECTOR_CONVERTER 1  // 默认启用
 
 // 结构体依赖关系检查
+
+#if ENABLE_COMPLEXDATA_CONVERTER
+#if !ENABLE_NODE_CONVERTER
+#error struct ComplexData converter requires Node converter to be enabled
+#endif
+#if !ENABLE_POINT_CONVERTER
+#error struct ComplexData converter requires Point converter to be enabled
+#endif
+#if !ENABLE_VECTOR_CONVERTER
+#error struct ComplexData converter requires Vector converter to be enabled
+#endif
+#endif
+
+#if ENABLE_VECTOR_CONVERTER
+#if !ENABLE_POINT_CONVERTER
+#error struct Vector converter requires Point converter to be enabled
+#endif
+#endif
+
+#if ENABLE_NESTEDSTRUCT_CONVERTER
+#if !ENABLE_BITFIELDS_CONVERTER
+#error struct NestedStruct converter requires BitFields converter to be enabled
+#endif
+#if !ENABLE_POINT_CONVERTER
+#error struct NestedStruct converter requires Point converter to be enabled
+#endif
+#if !ENABLE_VECTOR_CONVERTER
+#error struct NestedStruct converter requires Vector converter to be enabled
+#endif
+#endif
 
 #include <cjson/cJSON.h>
 #include <stddef.h>
@@ -36,124 +66,154 @@ typedef enum {
 
 // 结构体转换函数声明
 
-#if ENABLE_STRUCT_BITFIELDS_CONVERTER
+#if ENABLE_BITFIELDS_CONVERTER
 
-// struct struct BitFields 转换函数
-cJSON* struct_struct bitfields_to_json(const struct struct BitFields* data, const struct struct BitFields* default_data);
-convert_status_t json_to_struct_struct bitfields(const cJSON* json, const struct struct BitFields* default_data, struct struct BitFields* data);
+// BitFields 转换函数
+cJSON* bitfields_to_json(const struct BitFields* data, const struct BitFields* default_data);
+convert_status_t json_to_bitfields(const cJSON* json, const struct BitFields* default_data, struct BitFields* data);
 
-// struct struct BitFields 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct BitFields)
+// BitFields 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct BitFields)
 
-#endif  // ENABLE_STRUCT_BITFIELDS_CONVERTER
+// BitFields 打印函数
+void print_bitfields(const struct BitFields* data);
 
-
-#if ENABLE_STRUCT_COMPLEXDATA_CONVERTER
-
-// struct struct ComplexData 转换函数
-cJSON* struct_struct complexdata_to_json(const struct struct ComplexData* data, const struct struct ComplexData* default_data);
-convert_status_t json_to_struct_struct complexdata(const cJSON* json, const struct struct ComplexData* default_data, struct struct ComplexData* data);
-
-// struct struct ComplexData 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct ComplexData)
-
-#endif  // ENABLE_STRUCT_COMPLEXDATA_CONVERTER
+#endif  // ENABLE_BITFIELDS_CONVERTER
 
 
-#if ENABLE_STRUCT_CONFIG_CONVERTER
+#if ENABLE_NODE_CONVERTER
 
-// struct struct Config 转换函数
-cJSON* struct_struct config_to_json(const struct struct Config* data, const struct struct Config* default_data);
-convert_status_t json_to_struct_struct config(const cJSON* json, const struct struct Config* default_data, struct struct Config* data);
+// Node 转换函数
+cJSON* node_to_json(const struct Node* data, const struct Node* default_data);
+convert_status_t json_to_node(const cJSON* json, const struct Node* default_data, struct Node* data);
 
-// struct struct Config 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct Config)
+// Node 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct Node)
 
-#endif  // ENABLE_STRUCT_CONFIG_CONVERTER
+// Node 打印函数
+void print_node(const struct Node* data);
 
-
-#if ENABLE_STRUCT_NESTEDSTRUCT_CONVERTER
-
-// struct struct NestedStruct 转换函数
-cJSON* struct_struct nestedstruct_to_json(const struct struct NestedStruct* data, const struct struct NestedStruct* default_data);
-convert_status_t json_to_struct_struct nestedstruct(const cJSON* json, const struct struct NestedStruct* default_data, struct struct NestedStruct* data);
-
-// struct struct NestedStruct 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct NestedStruct)
-
-#endif  // ENABLE_STRUCT_NESTEDSTRUCT_CONVERTER
+#endif  // ENABLE_NODE_CONVERTER
 
 
-#if ENABLE_STRUCT_NODE_CONVERTER
+#if ENABLE_POINT_CONVERTER
 
-// struct struct Node 转换函数
-cJSON* struct_struct node_to_json(const struct struct Node* data, const struct struct Node* default_data);
-convert_status_t json_to_struct_struct node(const cJSON* json, const struct struct Node* default_data, struct struct Node* data);
+// Point 转换函数
+cJSON* point_to_json(const struct Point* data, const struct Point* default_data);
+convert_status_t json_to_point(const cJSON* json, const struct Point* default_data, struct Point* data);
 
-// struct struct Node 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct Node)
+// Point 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct Point)
 
-#endif  // ENABLE_STRUCT_NODE_CONVERTER
+// Point 打印函数
+void print_point(const struct Point* data);
 
-
-#if ENABLE_STRUCT_POINT_CONVERTER
-
-// struct struct Point 转换函数
-cJSON* struct_struct point_to_json(const struct struct Point* data, const struct struct Point* default_data);
-convert_status_t json_to_struct_struct point(const cJSON* json, const struct struct Point* default_data, struct struct Point* data);
-
-// struct struct Point 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct Point)
-
-#endif  // ENABLE_STRUCT_POINT_CONVERTER
+#endif  // ENABLE_POINT_CONVERTER
 
 
-#if ENABLE_STRUCT_RINGBUFFER_CONVERTER
+#if ENABLE_VECTOR_CONVERTER
 
-// struct struct RingBuffer 转换函数
-cJSON* struct_struct ringbuffer_to_json(const struct struct RingBuffer* data, const struct struct RingBuffer* default_data);
-convert_status_t json_to_struct_struct ringbuffer(const cJSON* json, const struct struct RingBuffer* default_data, struct struct RingBuffer* data);
+// Vector 转换函数
+cJSON* vector_to_json(const struct Vector* data, const struct Vector* default_data);
+convert_status_t json_to_vector(const cJSON* json, const struct Vector* default_data, struct Vector* data);
 
-// struct struct RingBuffer 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct RingBuffer)
+// Vector 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct Vector)
 
-#endif  // ENABLE_STRUCT_RINGBUFFER_CONVERTER
+// Vector 打印函数
+void print_vector(const struct Vector* data);
 
-
-#if ENABLE_STRUCT_STRINGBUILDER_CONVERTER
-
-// struct struct StringBuilder 转换函数
-cJSON* struct_struct stringbuilder_to_json(const struct struct StringBuilder* data, const struct struct StringBuilder* default_data);
-convert_status_t json_to_struct_struct stringbuilder(const cJSON* json, const struct struct StringBuilder* default_data, struct struct StringBuilder* data);
-
-// struct struct StringBuilder 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct StringBuilder)
-
-#endif  // ENABLE_STRUCT_STRINGBUILDER_CONVERTER
+#endif  // ENABLE_VECTOR_CONVERTER
 
 
-#if ENABLE_STRUCT_STRINGVIEW_CONVERTER
+#if ENABLE_COMPLEXDATA_CONVERTER
 
-// struct struct StringView 转换函数
-cJSON* struct_struct stringview_to_json(const struct struct StringView* data, const struct struct StringView* default_data);
-convert_status_t json_to_struct_struct stringview(const cJSON* json, const struct struct StringView* default_data, struct struct StringView* data);
+// ComplexData 转换函数
+cJSON* complexdata_to_json(const struct ComplexData* data, const struct ComplexData* default_data);
+convert_status_t json_to_complexdata(const cJSON* json, const struct ComplexData* default_data, struct ComplexData* data);
 
-// struct struct StringView 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct StringView)
+// ComplexData 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct ComplexData)
 
-#endif  // ENABLE_STRUCT_STRINGVIEW_CONVERTER
+// ComplexData 打印函数
+void print_complexdata(const struct ComplexData* data);
+
+#endif  // ENABLE_COMPLEXDATA_CONVERTER
 
 
-#if ENABLE_STRUCT_VECTOR_CONVERTER
+#if ENABLE_CONFIG_CONVERTER
 
-// struct struct Vector 转换函数
-cJSON* struct_struct vector_to_json(const struct struct Vector* data, const struct struct Vector* default_data);
-convert_status_t json_to_struct_struct vector(const cJSON* json, const struct struct Vector* default_data, struct struct Vector* data);
+// Config 转换函数
+cJSON* config_to_json(const struct Config* data, const struct Config* default_data);
+convert_status_t json_to_config(const cJSON* json, const struct Config* default_data, struct Config* data);
 
-// struct struct Vector 数组转换函数
-DECLARE_ARRAY_CONVERTERS(struct struct Vector)
+// Config 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct Config)
 
-#endif  // ENABLE_STRUCT_VECTOR_CONVERTER
+// Config 打印函数
+void print_config(const struct Config* data);
+
+#endif  // ENABLE_CONFIG_CONVERTER
+
+
+#if ENABLE_NESTEDSTRUCT_CONVERTER
+
+// NestedStruct 转换函数
+cJSON* nestedstruct_to_json(const struct NestedStruct* data, const struct NestedStruct* default_data);
+convert_status_t json_to_nestedstruct(const cJSON* json, const struct NestedStruct* default_data, struct NestedStruct* data);
+
+// NestedStruct 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct NestedStruct)
+
+// NestedStruct 打印函数
+void print_nestedstruct(const struct NestedStruct* data);
+
+#endif  // ENABLE_NESTEDSTRUCT_CONVERTER
+
+
+#if ENABLE_RINGBUFFER_CONVERTER
+
+// RingBuffer 转换函数
+cJSON* ringbuffer_to_json(const struct RingBuffer* data, const struct RingBuffer* default_data);
+convert_status_t json_to_ringbuffer(const cJSON* json, const struct RingBuffer* default_data, struct RingBuffer* data);
+
+// RingBuffer 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct RingBuffer)
+
+// RingBuffer 打印函数
+void print_ringbuffer(const struct RingBuffer* data);
+
+#endif  // ENABLE_RINGBUFFER_CONVERTER
+
+
+#if ENABLE_STRINGBUILDER_CONVERTER
+
+// StringBuilder 转换函数
+cJSON* stringbuilder_to_json(const struct StringBuilder* data, const struct StringBuilder* default_data);
+convert_status_t json_to_stringbuilder(const cJSON* json, const struct StringBuilder* default_data, struct StringBuilder* data);
+
+// StringBuilder 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct StringBuilder)
+
+// StringBuilder 打印函数
+void print_stringbuilder(const struct StringBuilder* data);
+
+#endif  // ENABLE_STRINGBUILDER_CONVERTER
+
+
+#if ENABLE_STRINGVIEW_CONVERTER
+
+// StringView 转换函数
+cJSON* stringview_to_json(const struct StringView* data, const struct StringView* default_data);
+convert_status_t json_to_stringview(const cJSON* json, const struct StringView* default_data, struct StringView* data);
+
+// StringView 数组转换函数
+DECLARE_ARRAY_CONVERTERS(struct StringView)
+
+// StringView 打印函数
+void print_stringview(const struct StringView* data);
+
+#endif  // ENABLE_STRINGVIEW_CONVERTER
 
 
 #endif // STRUCT_CONVERTER_H
