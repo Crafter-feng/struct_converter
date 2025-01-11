@@ -1,9 +1,67 @@
 from pathlib import Path
-from logger_config import setup_logger
-from utils import ParserUtils
+from utils.logger_config import setup_logger
 import json
 
 logger = setup_logger('CacheManager')
+
+class CacheFileUtils:
+    """解析器工具类，提供通用功能"""
+    
+    @staticmethod
+    def save_to_cache(data, cache_path=None):
+        """保存数据到缓存文件
+        
+        Args:
+            data: 要缓存的数据
+            cache_path: 缓存文件路径，默认为 .cache/test_structs_cache.json
+        """
+        if cache_path is None:
+            cache_path = Path('.cache/test_structs_cache.json')
+        
+        try:
+            # 确保缓存目录存在
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # 保存数据
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Cache saved to: {cache_path}")
+        except Exception as e:
+            logger.error(f"Failed to save cache: {str(e)}")
+            raise
+    
+    @staticmethod
+    def load_from_cache(cache_path=None):
+        """从缓存文件加载数据
+        
+        Args:
+            cache_path: 缓存文件路径，默认为 .cache/test_cache.json
+            
+        Returns:
+            dict: 缓存的数据，如果加载失败返回 None
+        """
+        if cache_path is None:
+            cache_path = Path('.cache/test_cache.json')
+        
+        try:
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+                logger.debug(f"Loaded cache from: {cache_path}")
+                if cache_data.get('types'):
+                    return cache_data.get('types')
+                else:
+                    return cache_data
+        except FileNotFoundError:
+            logger.warning(f"Cache file not found: {cache_path}")
+            return None
+        except json.JSONDecodeError:
+            logger.error(f"Invalid cache file format: {cache_path}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to load cache: {str(e)}")
+            return None
+        
 
 class CacheManager:
     """缓存管理器，处理文件解析结果的缓存"""
@@ -70,7 +128,7 @@ class CacheManager:
                     continue
             
             logger.debug(f"Loading cache from: {cache_file}")
-            cache_data = ParserUtils.load_from_cache(cache_file)
+            cache_data = CacheFileUtils.load_from_cache(cache_file)
             
             if cache_data:
                 # 合并类型信息
@@ -105,7 +163,7 @@ class CacheManager:
         cache_path = self.get_cache_path(file_path, cache_name)
         
         if not force and cache_path.exists():
-            cache_data = ParserUtils.load_from_cache(cache_path)
+            cache_data = CacheFileUtils.load_from_cache(cache_path)
             if cache_data:
                 logger.info(f"Using cached data from {cache_path}")
                 return cache_data, cache_path
@@ -126,7 +184,7 @@ class CacheManager:
             data: 要缓存的数据
             cache_path: 缓存文件路径
         """
-        ParserUtils.save_to_cache(data, cache_path)
+        CacheFileUtils.save_to_cache(data, cache_path)
         logger.info(f"Saved data to cache: {cache_path}")
     
     def clear_cache(self):

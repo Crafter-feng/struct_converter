@@ -2,7 +2,7 @@ import click
 import json
 from pathlib import Path
 from c_parser import CParser
-from code_generator import cJsonCodeGenerator
+from struct_converter.code_generator import cJsonCodeGenerator
 from utils import OutputFormatter, FileWriter
 
 @click.group()
@@ -18,7 +18,7 @@ def parse(header_file):
     
     if header_file:
         # 从头文件解析
-        type_info = parser.parse_header(header_file, use_cache=False)
+        type_info = parser.parse_declarations(header_file, use_cache=False)
     else:
         # 从缓存读取
         type_info = parser.get_type_info()
@@ -44,25 +44,15 @@ def analyze(source_file, header_file, output, format):
     
     # 如果提供了头文件，先解析头文件
     if header_file:
-        parser.parse_header(header_file)
+        parser.parse_declarations(header_file)
     
     # 解析源文件
-    declarations = parser.parse_declarations(source_file)
+    output_data = parser.parse_global_variables(source_file)
     
-    if not declarations:
+    if not output_data:
         click.echo("错误：解析失败", err=True)
         return
     
-    # 准备输出结果
-    output_data = {
-        'types': {
-            'structs': declarations['struct_info'],
-            'typedefs': declarations['typedef_types'],
-            'enums': declarations['enum_types'],
-            'macros': declarations['macro_definitions']
-        },
-        'variables': declarations['variables']
-    }
     
     if format == 'text':
         # 使用FileWriter输出文本格式
@@ -98,7 +88,7 @@ def clear_cache():
     click.echo("缓存已清除")
 
 @cli.command()
-@click.argument('output_dir', type=click.Path(), default='.')
+@click.argument('output_dir', type=click.Path(), default='output')
 @click.option('--header_file', type=click.Path(exists=True), required=False)
 @click.option('--structs', '-s', multiple=True, help='指定要生成的结构体，不指定则生成所有')
 @click.option('--force', '-f', is_flag=True, help='强制重新生成，忽略缓存')
@@ -108,7 +98,7 @@ def generate(output_dir, header_file, structs, force):
     
     if header_file:
         # 从头文件解析
-        type_info = parser.parse_header(header_file, use_cache=not force)
+        type_info = parser.parse_declarations(header_file, use_cache=not force)
     else:
         # 从缓存读取
         type_info = parser.get_type_info()
@@ -122,33 +112,43 @@ def generate(output_dir, header_file, structs, force):
     # 打印结构体信息
     OutputFormatter.print_struct_info(generator)
     
+    # 在生成代码之前添加
+    click.echo("Debug: Struct info content:")
+    click.echo(json.dumps(generator.struct_info, indent=2))
+    
     # 获取所有可用的结构体
     available_structs = set(generator.struct_info.keys())
-    if not available_structs:
-        click.echo("错误：未找到任何结构体定义", err=True)
-        return
-    
-    # 验证指定的结构体
-    if structs:
+    if not structs:
+        target_structs = list(available_structs)
+    else:
+        # 验证指定的结构体
         invalid_structs = set(structs) - available_structs
         if invalid_structs:
             click.echo(f"错误：找不到以下结构体：{', '.join(invalid_structs)}", err=True)
             return
         target_structs = list(structs)
-    else:
-        target_structs = list(available_structs)
     
     # 创建输出目录
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
     try:
+        # 添加调试信息
+        click.echo("Debug: Target structs:")
+        for struct in target_structs:
+            click.echo(f"  - {struct}")
+        click.echo("Debug: Struct info keys:")
+        for key in generator.struct_info.keys():
+            click.echo(f"  - {key}")
+            
         # 生成转换代码
         generator.generate_converter_code(output_dir, target_structs)
         click.echo(f"转换代码已生成到目录：{output_dir}")
         click.echo(f"生成的结构体：{', '.join(target_structs)}")
     except Exception as e:
         click.echo(f"错误：生成代码失败 - {str(e)}", err=True)
+        import traceback  # 添加这行来获取完整的错误堆栈
+        click.echo(traceback.format_exc(), err=True)
         return
 
 if __name__ == '__main__':

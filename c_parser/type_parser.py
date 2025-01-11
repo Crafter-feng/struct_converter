@@ -1,4 +1,4 @@
-from logger_config import setup_logger
+from utils.logger_config import setup_logger
 from utils import ExpressionParser, TreeSitterUtil
 import json
 
@@ -106,7 +106,7 @@ class CTypeParser:
             type_name in self.TYPE_ALIASES
         )
     
-    def parse_declarations(self, file_path):
+    def parse_declarations(self, file_path=None, tree=None):
         """解析C语言声明，包括类型定义、枚举和宏定义
         
         Args:
@@ -125,8 +125,13 @@ class CTypeParser:
         """
         logger.info(f"Parsing declarations from: {file_path}")
         
-        # 使用TreeSitterUtil解析文件
-        tree = self.ts_util.parse_file(file_path)
+        if not tree:
+            # 使用TreeSitterUtil解析文件
+            tree = self.ts_util.parse_file(file_path)
+
+        if not tree:
+            logger.error(f"Failed to parse file: {file_path}")
+            return {}
         
         # 重置收集器
         self.reset_collectors()
@@ -303,7 +308,9 @@ class CTypeParser:
                     if struct_child.type == 'type_identifier':
                         struct_name = struct_child.text.decode('utf8')
                         base_type = f"struct {struct_name}"
-                        logger.debug(f"Found struct type: {base_type}")
+                        # 添加结构体本身的typedef
+                        self.typedef_types[struct_name] = base_type
+                        logger.debug(f"Added struct base type: {struct_name} -> {base_type}")
                         break
             
             # 处理联合体
@@ -598,9 +605,9 @@ class CTypeParser:
                                     # 解析不出来的结果保持原样
                                     if value_type == 'number' and isinstance(value, (int, float)):
                                         is_parsed_value = True
-                                        logger.debug(f"Parsed enum value: {name} = {value}")
+                                        logger.debug(f"ExpressionParser Parsed enum value: {name} = {value}")
                                     else:
-                                        logger.error(f"Invalid enum value (non-numeric): {text}")
+                                        logger.error(f"ExpressionParser Invalid enum value (non-numeric): {text}")
                                         value = text
                                 except Exception as e:
                                     logger.error(f"Error parsing enum value: {text}, error: {e}")
@@ -614,9 +621,10 @@ class CTypeParser:
                                     current_value = value + 1
                             else:
                                 # 使用当前值并递增
-                                if isinstance(value, (int, float)):
+                                if isinstance(current_value, (int, float)):
                                     enum_values[name] = current_value
                                     current_value += 1
+                                    logger.debug(f"enum use self up value: {name} = {enum_values[name]}")
                                 else:
                                     enum_values[name] = None
         
@@ -773,6 +781,46 @@ class CTypeParser:
                 if array_name:
                     field_info['name'] = array_name
         
+        # 5. 处理位域
+        for child in node.children:
+            if child.type == 'bitfield_clause':  # 检测位域声明
+                # 获取位域大小
+                for bitfield_child in child.children:
+                    if bitfield_child.type == ':':
+                        continue
+                    # 扩展表达式类型的处理
+                    elif bitfield_child.type in [
+                        'number_literal', 'hex_literal', 'octal_literal',
+                        'decimal_literal', 'binary_expression', 'identifier',
+                        'preproc_arg', 'unary_expression'
+                    ]:
+                        try:
+                            text = bitfield_child.text.decode('utf8').strip()
+                            # 处理括号表达式
+                            if text.startswith('(') and text.endswith(')'):
+                                text = text[1:-1].strip()
+                            
+                            # 使用 ExpressionParser 处理值
+                            value, value_type = ExpressionParser.parse(
+                            text,
+                            self.enum_types,
+                            self.macro_definitions
+                        )
+                            
+                            # 解析不出来的结果保持原样
+                            if value_type == 'number' and isinstance(value, int):
+                                bit_size = value
+                                logger.debug(f"ExpressionParser Parsed bit_size: {bit_size}")
+                            else:
+                                logger.error(f"ExpressionParser Invalid bit_size value (non-numeric): {text}")
+                                bit_size = text
+                        except Exception as e:
+                            logger.error(f"Error parsing bit_size value: {text}, error: {e}")
+                            bit_size = text
+
+                        field_info['bit_field'] = bit_size
+                        logger.debug(f"Parsed bit_field: {field_info['name']} = {bit_size}")
+
         return field_info
     
     def _parse_array_dimensions(self, declarator):

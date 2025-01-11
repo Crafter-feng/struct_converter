@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "converter_cli.py",
             "console": "integratedTerminal",
-            "args": "parse ./test_structs.h"
+            "args": "parse ./tests/test_structs.h"
         },
         {
             "name": "Python Debugger: analyze",
@@ -18,7 +18,7 @@
             "request": "launch",
             "program": "converter_cli.py",
             "console": "integratedTerminal",
-            "args": "analyze test_data.c --format json -o result.json"
+            "args": "analyze ./tests/test_data.c --format json -o output/result.json"
         },
         {
             "name": "Python Debugger: generate",

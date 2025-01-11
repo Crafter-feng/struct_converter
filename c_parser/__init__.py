@@ -1,9 +1,8 @@
 from pathlib import Path
-from logger_config import setup_logger
-from type_parser import CTypeParser
-from data_parser import CDataParser
-from utils import ParserUtils
-from cache_manager import CacheManager
+from utils.logger_config import setup_logger
+from utils.cache_manager import CacheManager
+from .type_parser import CTypeParser
+from .data_parser import CDataParser
 import json
 
 logger = setup_logger('CParser')
@@ -33,45 +32,14 @@ class CParser:
         self.cache_manager = CacheManager(cache_dir)
     
     def get_type_info(self, source_file=None):
-        """获取类型信息
+                    # 加载所有头文件缓存
+        type_info = self.cache_manager.load_header_caches()
+        logger.debug("Loaded all header caches")
         
-        Args:
-            source_file: 源文件路径，如果提供则只返回该文件相关的类型信息
-            
-        Returns:
-            dict: 类型信息字典
-        """
-        # 如果指定了源文件，只返回该文件的类型信息
-        if source_file:
-            file_key = str(Path(source_file).resolve())
-            return self._type_info.get(file_key, {})
-        
-        # 合并所有文件的类型信息
-        merged_types = {
-            'typedef_types': {},
-            'struct_types': [],
-            'union_types': [],
-            'pointer_types': {},
-            'struct_info': {},
-            'union_info': {},
-            'enum_types': {},
-            'macro_definitions': {}
-        }
-        
-        # 合并所有文件的类型信息
-        for file_types in self._type_info.values():
-            for key, value in file_types.items():
-                if isinstance(value, dict):
-                    merged_types[key].update(value)
-                elif isinstance(value, list):
-                    merged_types[key].extend(value)
-                else:
-                    merged_types[key] = value
-        
-        return merged_types
+        return type_info
     
-    def parse_header(self, header_file, use_cache=True, ref_headers=None):
-        """解析头文件
+    def parse_declarations(self, header_file, use_cache=True, ref_headers=None):
+        """解析文件里面的类型定义
         
         Args:
             header_file: 头文件路径
@@ -107,7 +75,7 @@ class CParser:
         
         return self.get_type_info()
     
-    def parse_source(self, source_file, header_files=None, cache_name=None, force=False):
+    def parse_global_variables(self, source_file, header_files=None, cache_name=None, force=False):
         """解析源文件"""
         source_path = Path(source_file)
         logger.info(f"Parsing source file: {source_path}")
@@ -134,7 +102,7 @@ class CParser:
         # 重新初始化DataParser，确保使用最新的类型信息
         self.data_parser = CDataParser(type_info)
         
-        result = self.data_parser.parse_source(source_file)
+        result = self.data_parser.parse_global_variables(source_file)
         
         # 确保结果包含正确的格式
         if 'types' not in result:
