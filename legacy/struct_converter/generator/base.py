@@ -3,10 +3,10 @@ from pathlib import Path
 from ..core.cache import StructCache
 from ..core.formatter import CodeFormatter
 from ..core.type_helper import TypeHelper
-from c_parser.type_manager import TypeManager
-from utils.logger_config import setup_logger
+from c_parser.core.type_manager import TypeManager
+from utils.logger import logger 
 
-logger = setup_logger('BaseGenerator')
+
 
 class BaseGenerator:
     """代码生成器基类"""

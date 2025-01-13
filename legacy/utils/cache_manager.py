@@ -1,8 +1,8 @@
 from pathlib import Path
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 import json
 
-logger = setup_logger('CacheManager')
+
 
 class CacheFileUtils:
     """解析器工具类，提供通用功能"""

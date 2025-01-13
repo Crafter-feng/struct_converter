@@ -1,8 +1,8 @@
 from typing import Dict, Any, Set, Optional
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 import json
 
-logger = setup_logger('TypeManager')
+
 
 class TypeManager:
     """C语言类型管理器"""

@@ -8,23 +8,23 @@
             "name": "Python Debugger: parse",
             "type": "debugpy",
             "request": "launch",
-            "program": "converter_cli.py",
+            "program": "src/cli.py ",
             "console": "integratedTerminal",
-            "args": "parse ./tests/test_structs.h"
+            "args": "parse tests/fixtures/c_files/test_structs.h"
         },
         {
             "name": "Python Debugger: analyze",
             "type": "debugpy",
             "request": "launch",
-            "program": "converter_cli.py",
+            "program": "src/cli.py ",
             "console": "integratedTerminal",
-            "args": "analyze ./tests/test_data.c --format json -o output/result.json"
+            "args": "analyze tests/fixtures/c_files/test_data.c --format json -o output/result.json"
         },
         {
             "name": "Python Debugger: generate",
             "type": "debugpy",
             "request": "launch",
-            "program": "converter_cli.py",
+            "program": "src/cli.py ",
             "console": "integratedTerminal",
             "args": "generate"
         }

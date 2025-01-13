@@ -1,47 +1,24 @@
-import threading
-from typing import Any, Callable, Dict, TypeVar
-from functools import wraps
+import functools
+from typing import Callable, Any, Dict, TypeVar
+from loguru import logger
+
+logger = logger.bind(name="Cache")
 
 T = TypeVar('T')
 
-class ThreadSafeCache:
-    """线程安全的缓存"""
-    
-    def __init__(self):
-        self._cache: Dict[str, Any] = {}
-        self._lock = threading.Lock()
-        
-    def get(self, key: str) -> Any:
-        """获取缓存值"""
-        with self._lock:
-            return self._cache.get(key)
-            
-    def set(self, key: str, value: Any) -> None:
-        """设置缓存值"""
-        with self._lock:
-            self._cache[key] = value
-            
-    def clear(self) -> None:
-        """清除缓存"""
-        with self._lock:
-            self._cache.clear()
-
-def cached(cache_key_fn: Callable[..., str]) -> Callable:
-    """缓存装饰器
-    
-    Args:
-        cache_key_fn: 生成缓存键的函数
-    """
-    cache = ThreadSafeCache()
-    
+def cached(key_func: Callable[..., str]) -> Callable:
+    """缓存装饰器"""
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        @wraps(func)
+        cache: Dict[str, T] = {}
+        
+        @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> T:
-            key = cache_key_fn(*args, **kwargs)
-            result = cache.get(key)
-            if result is None:
-                result = func(*args, **kwargs)
-                cache.set(key, result)
-            return result
+            key = key_func(*args, **kwargs)
+            if key not in cache:
+                cache[key] = func(*args, **kwargs)
+                logger.debug(f"Cache miss for {func.__name__}[{key}]")
+            else:
+                logger.debug(f"Cache hit for {func.__name__}[{key}]")
+            return cache[key]
         return wrapper
     return decorator 

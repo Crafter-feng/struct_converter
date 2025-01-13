@@ -1,25 +1,20 @@
-import logging
 import functools
 import time
-from typing import Any, Callable, TypeVar
+from typing import Callable, Any
+from loguru import logger
 
-T = TypeVar('T')
-
-def log_execution(logger: logging.Logger) -> Callable:
-    """记录函数执行的装饰器"""
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> T:
-            start_time = time.time()
-            try:
-                result = func(*args, **kwargs)
-                end_time = time.time()
-                logger.debug(
-                    f"{func.__name__} completed in {end_time - start_time:.3f}s"
-                )
-                return result
-            except Exception as e:
-                logger.error(f"{func.__name__} failed: {e}")
-                raise
-        return wrapper
-    return decorator 
+def log_execution(func: Callable) -> Callable:
+    """记录函数执行日志的装饰器"""
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time = time.time()
+        try:
+            result = func(*args, **kwargs)
+            duration = time.time() - start_time
+            logger.debug(f"{func.__name__} completed in {duration:.3f}s")
+            return result
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"{func.__name__} failed after {duration:.3f}s: {e}")
+            raise
+    return wrapper 

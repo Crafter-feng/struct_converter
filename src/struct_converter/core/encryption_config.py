@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Union
 import json
 from pathlib import Path
 
@@ -17,16 +17,28 @@ class EncryptionConfig:
     encrypt_all: bool = False
     
     # 需要加密的字段列表 (struct_name -> [field_names])
-    encrypted_fields: Dict[str, list[str]] = None
+    encrypted_fields: Dict[str, List[str]] = None
     
     # 不需要加密的字段列表
-    excluded_fields: Dict[str, list[str]] = None
+    excluded_fields: Optional[Dict[str, List[str]]] = None
     
     # 是否在注释中保留原始名称
     keep_original_names: bool = True
     
     # 是否生成字段映射文件
     generate_map_file: bool = True
+    
+    # 加密密钥
+    encryption_key: Optional[str] = None
+    
+    # 加密方法
+    encryption_method: Optional[str] = None
+    
+    # 字段前缀
+    field_prefix: Optional[str] = None
+    
+    # 字段后缀
+    field_suffix: Optional[str] = None
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'EncryptionConfig':

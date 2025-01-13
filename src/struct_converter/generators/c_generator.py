@@ -1,15 +1,20 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from pathlib import Path
+from jinja2 import Template
 from loguru import logger
-from ..core.config import GeneratorConfig
+from config import GeneratorConfig
+from c_parser.core.type_manager import TypeManager
 from .base_generator import BaseGenerator
-from utils.decorators import log_execution
+
+logger = logger.bind(name="CGenerator")
 
 class CGenerator(BaseGenerator):
     """C代码生成器"""
     
-    def __init__(self, config: GeneratorConfig = None):
-        super().__init__(config)
-        self.logger = logger.bind(generator="CGenerator")
+    def __init__(self, config: Optional[GeneratorConfig] = None):
+        super().__init__(config or GeneratorConfig())
+        self.type_manager = TypeManager()
+        self.logger = logger
         
     def _generate(self, parse_result: Dict[str, Any]) -> Dict[str, str]:
         """生成C代码"""

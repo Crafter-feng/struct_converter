@@ -1,9 +1,9 @@
 from pathlib import Path
 import json
 from typing import Dict, Any, List, Optional
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 
-logger = setup_logger('DataGenerator')
+
 
 class DataGenerator:
     """数据定义生成器"""

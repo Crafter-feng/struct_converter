@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from .type_converter import TypeConverter
-from utils.logger_config import get_logger
+from utils.logger import logger 
 from pathlib import Path
-from .config import GeneratorConfig
+from utils.config import GeneratorConfig
 from .exceptions import CodeGenerationError
 from utils.code_formatter import CodeFormatter
 
-logger = get_logger("CodeGenerator")
+
 
 class CodeGenerator(ABC):
     """代码生成器基类"""

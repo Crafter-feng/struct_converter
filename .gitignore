@@ -3,5 +3,9 @@
 logs
 .cache
 *.log
+*.pyc
+*.pyo
+*.pyd
+*.pyw
 result.json
 .cursorrules

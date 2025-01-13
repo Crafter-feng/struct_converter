@@ -1,12 +1,12 @@
 import json
 from typing import Any, Dict, Optional
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 from utils import TreeSitterUtil
 from utils import ExpressionParser
 from .type_parser import CTypeParser
 from .type_manager import TypeManager
 
-logger = setup_logger('DataParser')
+
 
 class CDataParser:
     """C语言数据解析器，负责解析C源文件中的变量定义和初始化数据"""

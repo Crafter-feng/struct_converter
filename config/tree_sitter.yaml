@@ -1,0 +1,5 @@
+# Tree-sitter配置
+c_parser_path: "tree-sitter-c"  # 相对于项目根目录
+build_dir: "build"
+library_file: "c.so"
+language_name: "c" 

@@ -2,9 +2,9 @@ from pathlib import Path
 import json
 import time
 from typing import Dict, Any, Optional
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 
-logger = setup_logger('StructCache')
+
 
 class StructCache:
     """结构体代码缓存管理器"""

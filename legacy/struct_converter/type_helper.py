@@ -1,8 +1,8 @@
 from typing import Optional
-from c_parser.type_manager import TypeManager
-from utils.logger_config import setup_logger
+from c_parser.core.type_manager import TypeManager
+from utils.logger import logger 
 
-logger = setup_logger('TypeHelper')
+
 
 class TypeHelper:
     """类型处理辅助工具"""

@@ -1,11 +1,11 @@
 import json
 from pathlib import Path
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 import time
-from c_parser.type_manager import TypeManager
+from c_parser.core.type_manager import TypeManager
 
 # 创建全局 logger
-logger = setup_logger('cJsonCodeGenerator')
+
 
 class StructCache:
     """结构体代码缓存"""

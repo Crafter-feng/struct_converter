@@ -1,6 +1,12 @@
+from loguru import logger
+
+logger = logger.bind(name="Exceptions")
+
 class StructConverterError(Exception):
-    """结构体转换器基础异常类"""
-    pass
+    """基础异常类"""
+    def __init__(self, message: str):
+        super().__init__(message)
+        logger.error(message)
 
 class ValidationError(StructConverterError):
     """验证错误"""
@@ -8,6 +14,10 @@ class ValidationError(StructConverterError):
 
 class ConfigError(StructConverterError):
     """配置错误"""
+    pass
+
+class ParserError(StructConverterError):
+    """解析错误"""
     pass
 
 class GenerationError(StructConverterError):
@@ -18,18 +28,6 @@ class EncryptionError(StructConverterError):
     """加密错误"""
     pass
 
-class ParserError(StructConverterError):
-    """解析错误"""
-    pass
-
-class NameConflictError(ValidationError):
-    """名称冲突错误"""
-    pass
-
-class InvalidNameError(ValidationError):
-    """无效名称错误"""
-    pass
-
-class PrefixConflictError(ValidationError):
-    """前缀冲突错误"""
-    pass 
+# 别名
+ParseError = ParserError
+CodeGenerationError = GenerationError 

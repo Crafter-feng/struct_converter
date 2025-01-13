@@ -1,13 +1,16 @@
 import hashlib
 import base64
 import json
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, Optional, Set
 from pathlib import Path
 from loguru import logger
-from struct_converter.core.encryption_config import EncryptionConfig
-from struct_converter.core.field_validator import FieldValidator
+from config import EncryptionConfig
+from .field_validator import FieldValidator
 from utils.cache import cached
 from utils.logging import log_execution
+from c_parser.core.type_manager import TypeManager
+
+logger = logger.bind(name="FieldEncryptor")
 
 class FieldEncryptor:
     """字段加密管理器"""
@@ -17,10 +20,11 @@ class FieldEncryptor:
         self.validator = FieldValidator()
         self.encrypted_fields: Dict[str, Dict[str, str]] = {}  # struct_name -> {field_name: encrypted_name}
         self.field_comments: Dict[str, Dict[str, str]] = {}    # struct_name -> {encrypted_name: original_name}
-        self._used_names = set()  # 用于确保名称唯一性
+        self._used_names: Set[str] = set()  # 用于确保名称唯一性
         self._struct_prefix: Dict[str, str] = {}  # 结构体名称前缀缓存
         self._name_cache: Dict[str, str] = {}  # 缓存已生成的加密名称
-        self.logger = logger.bind(component="FieldEncryptor")
+        self.logger = logger
+        self.type_manager = TypeManager()
         
     def _get_struct_prefix(self, struct_name: str) -> str:
         """获取结构体名称的前缀用于加密"""
@@ -33,7 +37,7 @@ class FieldEncryptor:
         return self._struct_prefix[struct_name]
         
     @cached(lambda self, struct_name, field_name: f"{struct_name}:{field_name}")
-    @log_execution(logger)
+    @log_execution
     def encrypt_field_name(self, struct_name: str, field_name: str) -> str:
         """加密字段名（带缓存和日志）"""
         return self._generate_encrypted_name(struct_name, field_name)
@@ -47,7 +51,7 @@ class FieldEncryptor:
         self.encrypted_fields[struct_name][field_name] = encrypted_name
         self.field_comments[struct_name][encrypted_name] = field_name
         
-    @log_execution(logger)
+    @log_execution
     def generate_field_map(self) -> str:
         """生成字段映射头文件内容"""
         try:
@@ -119,7 +123,7 @@ class FieldEncryptor:
             
             return "\n".join(content)
         except Exception as e:
-            logger.error(f"Failed to generate field map: {e}")
+            self.logger.error(f"Failed to generate field map: {e}")
             # 生成一个最小的有效头文件
             return "\n".join([
                 "#ifndef __FIELD_MAP_H__",
@@ -127,8 +131,8 @@ class FieldEncryptor:
                 "static inline const char* get_field_name(const char* n) { return n; }",
                 "#endif"
             ])
-        
-    @log_execution(logger)
+            
+    @log_execution
     def save_field_map(self, output_dir: str) -> None:
         """保存字段映射到文件"""
         output_path = Path(output_dir)
@@ -143,13 +147,13 @@ class FieldEncryptor:
             json.dump({
                 "encrypted_fields": self.encrypted_fields,
                 "field_comments": self.field_comments
-            }, f, indent=2) 
-        
+            }, f, indent=2)
+            
     def _generate_encrypted_name(self, struct_name: str, field_name: str) -> str:
         """生成加密名称"""
         try:
             # 检查是否需要加密
-            if not self.config.should_encrypt_field(struct_name, field_name):
+            if not self._should_encrypt_field(struct_name, field_name):
                 return field_name
             
             prefix = self._get_struct_prefix(struct_name)
@@ -173,5 +177,21 @@ class FieldEncryptor:
             return encrypted_name
             
         except Exception as e:
-            logger.error(f"Failed to generate encrypted name: {struct_name}.{field_name}: {e}")
-            return f"F{abs(hash(field_name)) % 1000:03d}" 
+            self.logger.error(f"Failed to generate encrypted name: {struct_name}.{field_name}: {e}")
+            return f"F{abs(hash(field_name)) % 1000:03d}"
+            
+    def _should_encrypt_field(self, struct_name: str, field_name: str) -> bool:
+        # 检查字段类型
+        field_info = self.type_manager.get_field_info(struct_name, field_name)
+        if not field_info:
+            return False
+            
+        # 不加密位域
+        if field_info.get('is_bitfield'):
+            return False
+            
+        # 不加密函数指针
+        if self.type_manager.is_function_pointer(field_info['type']):
+            return False
+            
+        return self.config.should_encrypt_field(struct_name, field_name) 

@@ -1,0 +1,14 @@
+# 字段加密配置
+enable: true
+salt: "my_secret_salt"
+encrypt_all: false
+encrypted_fields:
+  UserInfo:
+    - password
+    - email
+  PaymentInfo:
+    - card_number
+excluded_fields:
+  UserInfo:
+    - id
+    - username 

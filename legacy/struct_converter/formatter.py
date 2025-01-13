@@ -1,7 +1,7 @@
 from typing import List, Union
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 
-logger = setup_logger('CodeFormatter')
+
 
 class CodeFormatter:
     """代码格式化工具"""

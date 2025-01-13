@@ -1,126 +1,631 @@
-import json
-import os
-import pytest
-from c_parser import TypeManager
+import unittest
+from typing import Dict, Any
+from c_parser.core.type_manager import TypeManager
+
+class TestTypeManagerBasic(unittest.TestCase):
+    """测试 TypeManager 的基本功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+
+    def test_basic_type_check(self):
+        """测试基本类型检查"""
+        # 测试基本类型
+        self.assertTrue(self.type_manager.is_basic_type('int'))
+        self.assertTrue(self.type_manager.is_basic_type('char'))
+        self.assertTrue(self.type_manager.is_basic_type('float'))
+        self.assertTrue(self.type_manager.is_basic_type('double'))
+        
+        # 测试类型别名
+        self.assertTrue(self.type_manager.is_basic_type('u8'))
+        self.assertTrue(self.type_manager.is_basic_type('i32'))
+        
+        # 测试非基本类型
+        self.assertFalse(self.type_manager.is_basic_type('struct test'))
+        self.assertFalse(self.type_manager.is_basic_type('enum color'))
+
+    def test_type_aliases(self):
+        """测试类型别名"""
+        # 测试内置别名
+        self.assertEqual(self.type_manager.get_real_type('u8'), 'uint8_t')
+        self.assertEqual(self.type_manager.get_real_type('i32'), 'int32_t')
+        
+        # 测试自定义别名
+        self.type_manager.add_typedef_type('my_int', 'int')
+        self.assertEqual(self.type_manager.get_real_type('my_int'), 'int')
+
+    def test_type_size_and_alignment(self):
+        """测试类型大小和对齐"""
+        # 测试基本类型的大小
+        self.assertEqual(self.type_manager.get_type_size('char'), 1)
+        self.assertEqual(self.type_manager.get_type_size('int'), 4)
+        self.assertEqual(self.type_manager.get_type_size('long'), 8)
+        
+        # 测试基本类型的对齐
+        self.assertEqual(self.type_manager.get_type_alignment('char'), 1)
+        self.assertEqual(self.type_manager.get_type_alignment('int'), 4)
+        self.assertEqual(self.type_manager.get_type_alignment('long'), 8)
+
+    def test_complex_type_aliases(self):
+        """测试复杂类型别名"""
+        # 测试多级别类型别名
+        self.type_manager.add_typedef_type('int_alias', 'int')
+        self.type_manager.add_typedef_type('my_int', 'int_alias')
+        self.type_manager.add_typedef_type('number', 'my_int')
+        
+        self.assertEqual(self.type_manager.get_real_type('number'), 'int')
+        self.assertTrue(self.type_manager.is_basic_type('number'))
+
+    def test_type_compatibility(self):
+        """测试类型兼容性"""
+        # 测试基本类型兼容性
+        self.assertTrue(self.type_manager.is_compatible_types('int', 'int32_t'))
+        self.assertTrue(self.type_manager.is_compatible_types('unsigned int', 'uint32_t'))
+        self.assertFalse(self.type_manager.is_compatible_types('int', 'char'))
+        
+        # 测试类型别名兼容性
+        self.type_manager.add_typedef_type('my_int', 'int')
+        self.assertTrue(self.type_manager.is_compatible_types('my_int', 'int'))
+        self.assertTrue(self.type_manager.is_compatible_types('my_int', 'int32_t'))
 
 
-class TestTypeManager:
-    @pytest.fixture
-    def type_info(self):
-        """加载测试数据"""
-        cache_file = os.path.join(os.path.dirname(__file__), '../.cache/test_structs.h.json')
-        with open(cache_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
-            
-    @pytest.fixture
-    def type_manager(self, type_info):
-        """创建TypeManager实例"""
-        return TypeManager(type_info)
+class TestTypeManagerStruct(unittest.TestCase):
+    """测试结构体相关功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+        # 创建一个测试结构体
+        self.struct_info = {
+            'kind': 'struct',
+            'name': 'test_struct',
+            'fields': [
+                {'name': 'a', 'type': 'int'},
+                {'name': 'b', 'type': 'char'},
+                {'name': 'c', 'type': 'float'}
+            ],
+            'size': 12,
+            'alignment': 4
+        }
+        self.type_manager.add_struct_type('test_struct', self.struct_info)
 
-    def test_basic_types(self, type_manager):
-        """测试基本类型判断"""
-        # 基本类型
-        assert type_manager.is_basic_type('int')
-        assert type_manager.is_basic_type('char')
-        assert type_manager.is_basic_type('float')
-        assert type_manager.is_basic_type('double')
+    def test_struct_type_check(self):
+        """测试结构体类型检查"""
+        self.assertTrue(self.type_manager.is_struct_type('test_struct'))
+        self.assertTrue(self.type_manager.is_struct_type('struct test_struct'))
+        self.assertFalse(self.type_manager.is_struct_type('int'))
+
+    def test_struct_info(self):
+        """测试结构体信息获取"""
+        info = self.type_manager.get_struct_info('test_struct')
+        self.assertEqual(info['size'], 12)
+        self.assertEqual(info['alignment'], 4)
+        self.assertEqual(len(info['fields']), 3)
+
+    def test_field_offset(self):
+        """测试字段偏移量计算"""
+        # int 字段应该在偏移量 0
+        self.assertEqual(self.type_manager.calculate_field_offset('test_struct', 'a'), 0)
+        # char 字段应该在偏移量 4
+        self.assertEqual(self.type_manager.calculate_field_offset('test_struct', 'b'), 4)
+        # float 字段应该在偏移量 8
+        self.assertEqual(self.type_manager.calculate_field_offset('test_struct', 'c'), 8)
+
+    def test_nested_struct(self):
+        """测试嵌套结构体"""
+        # 创建嵌套结构体
+        inner_struct = {
+            'kind': 'struct',
+            'name': 'inner',
+            'fields': [{'name': 'x', 'type': 'int'}],
+            'size': 4,
+            'alignment': 4
+        }
         
-        # 基本类型别名
-        assert type_manager.is_basic_type('u8')
-        assert type_manager.is_basic_type('i32')
-        assert type_manager.is_basic_type('f32')
+        outer_struct = {
+            'kind': 'struct',
+            'name': 'outer',
+            'fields': [
+                {'name': 'inner_field', 'type': 'inner'},
+                {'name': 'value', 'type': 'int'}
+            ],
+            'size': 8,
+            'alignment': 4
+        }
         
-        # 非基本类型
-        assert not type_manager.is_basic_type('Point')
-        assert not type_manager.is_basic_type('Node')
-        assert not type_manager.is_basic_type('DataValue')
+        self.type_manager.add_struct_type('inner', inner_struct)
+        self.type_manager.add_struct_type('outer', outer_struct)
         
-    def test_struct_types(self, type_manager):
-        """测试结构体类型判断"""
-        # 直接结构体类型
-        assert type_manager.is_struct_type('Point')
-        assert type_manager.is_struct_type('Vector')
-        assert type_manager.is_struct_type('Node')
+        # 验证嵌套结构体的字段偏移量
+        self.assertEqual(
+            self.type_manager.calculate_field_offset('outer', 'inner_field'),
+            0
+        )
+        self.assertEqual(
+            self.type_manager.calculate_field_offset('outer', 'value'),
+            4
+        )
+
+    def test_struct_with_array(self):
+        """测试带数组的结构体"""
+        struct_info = {
+            'kind': 'struct',
+            'name': 'array_struct',
+            'fields': [
+                {'name': 'arr', 'type': 'int', 'array_dims': [3]},
+                {'name': 'value', 'type': 'char'}
+            ]
+        }
+        self.type_manager.add_struct_type('array_struct', struct_info)
         
-        # typedef的结构体类型
-        assert type_manager.is_struct_type('struct Point')
+        # 验证数组字段的解析
+        type_info = self.type_manager.resolve_type('array_struct')
+        self.assertTrue(type_info['is_struct'])
+        field_info = self.type_manager.get_field_info('array_struct', 'arr')
+        self.assertEqual(field_info.get('array_dims'), [3])
+
+
+class TestTypeManagerEnum(unittest.TestCase):
+    """测试枚举相关功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+        # 创建一个测试枚举
+        self.enum_values = {
+            'RED': 0,
+            'GREEN': 1,
+            'BLUE': 2
+        }
+        self.type_manager.add_enum_type('color', self.enum_values)
+
+    def test_enum_type_check(self):
+        """测试枚举类型检查"""
+        self.assertTrue(self.type_manager.is_enum_type('color'))
+        self.assertTrue(self.type_manager.is_enum_type('enum color'))
+        self.assertFalse(self.type_manager.is_enum_type('int'))
+
+    def test_enum_values(self):
+        """测试枚举值获取"""
+        values = self.type_manager.get_enum_values('color')
+        self.assertEqual(values['RED'], 0)
+        self.assertEqual(values['GREEN'], 1)
+        self.assertEqual(values['BLUE'], 2)
+
+    def test_enum_value(self):
+        """测试单个枚举值获取"""
+        self.assertEqual(self.type_manager.get_enum_value('color', 'RED'), 0)
+        self.assertEqual(self.type_manager.get_enum_value('color', 'GREEN'), 1)
+        self.assertIsNone(self.type_manager.get_enum_value('color', 'YELLOW'))
+
+    def test_enum_with_expressions(self):
+        """测试带表达式的枚举"""
+        enum_values = {
+            'A': 1,
+            'B': '(A + 1)',  # 表达式值
+            'C': '(B * 2)',  # 依赖前面的值
+            'MAX': '0xFF'    # 十六进制值
+        }
+        self.type_manager.add_enum_type('complex_enum', enum_values)
         
-        # 非结构体类型
-        assert not type_manager.is_struct_type('int')
-        assert not type_manager.is_struct_type('DataValue')
-        assert not type_manager.is_struct_type('LogLevel')
+        values = self.type_manager.get_enum_values('complex_enum')
+        self.assertEqual(values['A'], 1)
+        self.assertEqual(values['B'], '(A + 1)')
+        self.assertEqual(values['C'], '(B * 2)')
+
+    def test_enum_scope(self):
+        """测试枚举作用域"""
+        # 添加全局枚举
+        global_enum = {'RED': 0, 'GREEN': 1}
+        global_info = {
+            'enum_types': ['colors'],
+            'enum_info': {'colors': {'values': global_enum}}
+        }
+        self.type_manager.merge_type_info(global_info, to_global=True)
         
-    def test_union_types(self, type_manager):
-        """测试联合体类型判断"""
-        # 直接联合体类型
-        assert type_manager.is_union_type('DataValue')
-        assert type_manager.is_union_type('union DataValue')
+        # 添加局部枚举
+        local_enum = {'SMALL': 0, 'MEDIUM': 1}
+        self.type_manager.add_enum_type('sizes', local_enum)
         
-        # 非联合体类型
-        assert not type_manager.is_union_type('Point')
-        assert not type_manager.is_union_type('int')
-        assert not type_manager.is_union_type('LogLevel')
+        # 验证作用域
+        self.assertEqual(self.type_manager.get_type_scope('colors'), 'global')
+        self.assertEqual(self.type_manager.get_type_scope('sizes'), 'file')
+
+
+class TestTypeManagerTypeInfo(unittest.TestCase):
+    """测试类型信息管理功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+
+    def test_type_info_export_import(self):
+        """测试类型信息的导出和导入"""
+        # 添加一些测试类型
+        self.type_manager.add_typedef_type('my_int', 'int')
+        self.type_manager.add_struct_type('test_struct', {
+            'kind': 'struct',
+            'name': 'test_struct',
+            'fields': [{'name': 'x', 'type': 'int'}]
+        })
         
-    def test_enum_types(self, type_manager):
-        """测试枚举类型判断"""
-        # 直接枚举类型
-        assert type_manager.is_enum_type('LogLevel')
-        assert type_manager.is_enum_type('Direction')
-        assert type_manager.is_enum_type('Status')
+        # 导出类型信息
+        type_info = self.type_manager.export_type_info()
         
-        # 非枚举类型
-        assert not type_manager.is_enum_type('Point')
-        assert not type_manager.is_enum_type('int')
-        assert not type_manager.is_enum_type('DataValue')
+        # 创建新的类型管理器并导入类型信息
+        new_manager = TypeManager(type_info)
         
-    def test_pointer_types(self, type_manager):
-        """测试指针类型判断"""
-        # 直接指针类型
-        assert type_manager.is_pointer_type('int*')
-        assert type_manager.is_pointer_type('char*')
-        assert type_manager.is_pointer_type('void*')
+        # 验证类型信息是否正确导入
+        self.assertTrue(new_manager.is_typedef_type('my_int'))
+        self.assertTrue(new_manager.is_struct_type('test_struct'))
+
+    def test_type_info_merge(self):
+        """测试类型信息合并"""
+        # 创建要合并的类型信息
+        other_info = {
+            'typedef_types': {'my_char': 'char'},
+            'struct_types': ['point'],
+            'struct_info': {
+                'point': {
+                    'kind': 'struct',
+                    'name': 'point',
+                    'fields': [
+                        {'name': 'x', 'type': 'int'},
+                        {'name': 'y', 'type': 'int'}
+                    ]
+                }
+            }
+        }
         
-        # typedef的指针类型
-        assert type_manager.is_pointer_type('PointPtr')
-        assert type_manager.is_pointer_type('VectorPtr')
+        # 合并类型信息
+        self.type_manager.merge_type_info(other_info, to_global=True)
         
-        # 非指针类型
-        assert not type_manager.is_pointer_type('int')
-        assert not type_manager.is_pointer_type('Point')
-        assert not type_manager.is_pointer_type('DataValue')
+        # 验证合并结果
+        self.assertTrue(self.type_manager.is_typedef_type('my_char'))
+        self.assertTrue(self.type_manager.is_struct_type('point'))
+
+
+class TestTypeManagerValidation(unittest.TestCase):
+    """测试类型验证功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+
+    def test_validate_struct_info(self):
+        """测试结构体信息验证"""
+        # 有效的结构体信息
+        valid_struct = {
+            'kind': 'struct',
+            'name': 'test',
+            'fields': [
+                {'name': 'x', 'type': 'int'},
+                {'name': 'y', 'type': 'int'}
+            ]
+        }
+        self.assertTrue(self.type_manager.validate_type_info(valid_struct))
         
-    def test_real_type_resolution(self, type_manager):
-        """测试类型解析"""
-        # 基本类型别名
-        assert type_manager.get_real_type('u8') == 'uint8_t'
-        assert type_manager.get_real_type('i32') == 'int32_t'
-        assert type_manager.get_real_type('f32') == 'float'
+        # 无效的结构体信息（缺少字段）
+        invalid_struct = {
+            'kind': 'struct',
+            'name': 'test'
+        }
+        self.assertFalse(self.type_manager.validate_type_info(invalid_struct))
+
+    def test_validate_enum_info(self):
+        """测试枚举信息验证"""
+        # 有效的枚举信息
+        valid_enum = {
+            'kind': 'enum',
+            'name': 'color',
+            'values': {'RED': 0, 'GREEN': 1}
+        }
+        self.assertTrue(self.type_manager.validate_type_info(valid_enum))
         
-        # 结构体类型
-        assert type_manager.get_real_type('Point') == 'struct Point'
-        assert type_manager.get_real_type('Vector') == 'struct Vector'
+        # 无效的枚举信息（values 不是字典）
+        invalid_enum = {
+            'kind': 'enum',
+            'name': 'color',
+            'values': [0, 1, 2]
+        }
+        self.assertFalse(self.type_manager.validate_type_info(invalid_enum))
+
+
+class TestTypeManagerUnion(unittest.TestCase):
+    """测试联合体相关功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+        # 创建一个测试联合体
+        self.union_info = {
+            'kind': 'union',
+            'name': 'test_union',
+            'fields': [
+                {'name': 'i', 'type': 'int'},
+                {'name': 'f', 'type': 'float'},
+                {'name': 'c', 'type': 'char'}
+            ],
+            'size': 4,  # 最大字段的大小
+            'alignment': 4
+        }
+        self.type_manager.add_union_type('test_union', self.union_info)
+
+    def test_union_type_check(self):
+        """测试联合体类型检查"""
+        self.assertTrue(self.type_manager.is_union_type('test_union'))
+        self.assertTrue(self.type_manager.is_union_type('union test_union'))
+        self.assertFalse(self.type_manager.is_union_type('int'))
+
+    def test_union_info(self):
+        """测试联合体信息获取"""
+        info = self.type_manager.get_union_info('test_union')
+        self.assertEqual(info['size'], 4)
+        self.assertEqual(info['alignment'], 4)
+        self.assertEqual(len(info['fields']), 3)
+
+    def test_union_field_offset(self):
+        """测试联合体字段偏移量"""
+        # 联合体所有字段的偏移量都应该是0
+        for field_name in ['i', 'f', 'c']:
+            field_info = self.type_manager.get_field_info('test_union', field_name)
+            self.assertEqual(field_info['offset'], 0)
+
+
+class TestTypeManagerPointer(unittest.TestCase):
+    """测试指针相关功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+
+    def test_pointer_type_check(self):
+        """测试指针类型检查"""
+        # 直接指针语法
+        self.assertTrue(self.type_manager.is_pointer_type('int*'))
+        self.assertTrue(self.type_manager.is_pointer_type('char**'))
         
-        # 指针类型
-        assert type_manager.get_real_type('PointPtr') == 'struct Point*'
+        # typedef 指针类型
+        self.type_manager.add_pointer_type('int_ptr', True)
+        self.assertTrue(self.type_manager.is_pointer_type('int_ptr'))
+
+    def test_pointer_size(self):
+        """测试指针大小"""
+        # 所有指针类型的大小都应该是8（64位系统）
+        self.assertEqual(self.type_manager.get_type_size('int*'), 8)
+        self.assertEqual(self.type_manager.get_type_size('char**'), 8)
+        self.assertEqual(self.type_manager.get_type_size('void*'), 8)
+
+    def test_pointer_compatibility(self):
+        """测试指针兼容性"""
+        # void* 可以与任何指针类型兼容
+        self.assertTrue(self.type_manager.is_compatible_types('void*', 'int*'))
+        self.assertTrue(self.type_manager.is_compatible_types('int*', 'void*'))
         
-        # 原始类型保持不变
-        assert type_manager.get_real_type('int') == 'int'
-        assert type_manager.get_real_type('char*') == 'char*'
+        # 相同类型的指针兼容
+        self.assertTrue(self.type_manager.is_compatible_types('int*', 'int*'))
         
-    def test_type_info_export(self, type_manager, type_info):
-        """测试类型信息导出"""
-        exported = type_manager.export_type_info()
+        # 不同类型的指针不兼容
+        self.assertFalse(self.type_manager.is_compatible_types('int*', 'char*'))
         
-        # 验证导出的类型信息
-        assert 'typedef_types' in exported
-        assert 'struct_types' in exported
-        assert 'union_types' in exported
-        assert 'pointer_types' in exported
-        assert 'struct_info' in exported
-        assert 'union_info' in exported
-        assert 'enum_types' in exported
+        # 不同级别的指针不兼容
+        self.assertFalse(self.type_manager.is_compatible_types('int*', 'int**'))
+
+    def test_complex_pointer_types(self):
+        """测试复杂指针类型"""
+        # 函数指针
+        self.type_manager.add_pointer_type('func_ptr', True)  # void (*)(int)
         
-        # 验证类型数量
-        assert len(exported['struct_types']) == len(type_info['struct_types'])
-        assert len(exported['union_types']) == len(type_info['union_types'])
-        assert len(exported['pointer_types']) == len(type_info['pointer_types']) 
+        # 指向数组的指针
+        self.assertTrue(self.type_manager.is_pointer_type('int (*)[10]'))
+        
+        # 多级指针
+        self.assertTrue(self.type_manager.is_pointer_type('int***'))
+        self.assertEqual(self.type_manager.get_type_size('int***'), 8)
+
+    def test_pointer_to_incomplete_type(self):
+        """测试指向不完整类型的指针"""
+        # 前向声明的结构体指针
+        struct_info = {'kind': 'struct', 'name': 'forward_struct'}
+        self.type_manager.add_struct_type('forward_struct', struct_info)
+        
+        # 指向不完整类型的指针仍然是有效的
+        self.assertTrue(self.type_manager.is_pointer_type('forward_struct*'))
+        self.assertEqual(self.type_manager.get_type_size('forward_struct*'), 8)
+
+
+class TestTypeManagerTypeHierarchy(unittest.TestCase):
+    """测试类型层次结构功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+        # 创建一个复杂的类型层次结构
+        self.type_manager.add_struct_type('point', {
+            'kind': 'struct',
+            'name': 'point',
+            'fields': [
+                {'name': 'x', 'type': 'int'},
+                {'name': 'y', 'type': 'int'}
+            ]
+        })
+        
+        self.type_manager.add_struct_type('line', {
+            'kind': 'struct',
+            'name': 'line',
+            'fields': [
+                {'name': 'start', 'type': 'point'},
+                {'name': 'end', 'type': 'point'}
+            ]
+        })
+
+    def test_type_hierarchy(self):
+        """测试类型层次结构获取"""
+        hierarchy = self.type_manager.get_type_hierarchy('line')
+        
+        # 验证基本结构
+        self.assertEqual(hierarchy['type'], 'struct')
+        self.assertEqual(len(hierarchy['fields']), 2)
+        
+        # 验证嵌套结构
+        start_field = next(f for f in hierarchy['fields'] if f['field_name'] == 'start')
+        self.assertEqual(start_field['type'], 'struct')
+        self.assertEqual(len(start_field['fields']), 2)
+
+    def test_type_dependencies(self):
+        """测试类型依赖关系"""
+        deps = self.type_manager.get_type_dependencies('line')
+        self.assertIn('point', deps)
+        self.assertIn('int', deps)
+
+    def test_circular_dependency(self):
+        """测试循环依赖"""
+        # 创建两个相互依赖的结构体
+        self.type_manager.add_struct_type('node', {
+            'kind': 'struct',
+            'name': 'node',
+            'fields': [
+                {'name': 'data', 'type': 'int'},
+                {'name': 'next', 'type': 'node*'}  # 指向自身的指针
+            ]
+        })
+        
+        # 验证类型层次结构处理循环依赖
+        hierarchy = self.type_manager.get_type_hierarchy('node')
+        next_field = next(f for f in hierarchy['fields'] if f['field_name'] == 'next')
+        self.assertEqual(next_field['type'], 'pointer')
+
+    def test_complex_type_dependencies(self):
+        """测试复杂类型依赖"""
+        # 创建一个复杂的类型依赖链
+        self.type_manager.add_typedef_type('data_t', 'int')
+        self.type_manager.add_struct_type('inner', {
+            'kind': 'struct',
+            'name': 'inner',
+            'fields': [{'name': 'value', 'type': 'data_t'}]
+        })
+        self.type_manager.add_struct_type('outer', {
+            'kind': 'struct',
+            'name': 'outer',
+            'fields': [{'name': 'inner_ptr', 'type': 'inner*'}]
+        })
+        
+        # 验证依赖关系
+        deps = self.type_manager.get_type_dependencies('outer')
+        self.assertIn('inner', deps)
+        self.assertIn('data_t', deps)
+        self.assertIn('int', deps)
+
+
+class TestTypeManagerMetadata(unittest.TestCase):
+    """测试类型元数据功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+        self.struct_info = {
+            'kind': 'struct',
+            'name': 'test_struct',
+            'fields': [{'name': 'x', 'type': 'int'}],
+            'location': {'file': 'test.h', 'line': 10},
+            'comment': 'Test structure',
+            'attributes': {'packed': True}
+        }
+        self.type_manager.add_struct_type('test_struct', self.struct_info)
+
+    def test_type_metadata(self):
+        """测试类型元数据获取"""
+        metadata = self.type_manager.get_type_metadata('test_struct')
+        
+        self.assertEqual(metadata['category'], 'struct')
+        self.assertEqual(metadata['location'], {'file': 'test.h', 'line': 10})
+        self.assertEqual(metadata['comment'], 'Test structure')
+        self.assertEqual(metadata['attributes'], {'packed': True})
+
+    def test_type_status(self):
+        """测试类型状态信息"""
+        status = self.type_manager.get_type_status('test_struct')
+        
+        self.assertTrue(status['is_complete'])
+        self.assertTrue(status['is_defined'])
+        self.assertEqual(status['scope'], 'file')
+
+    def test_type_summary(self):
+        """测试类型摘要信息"""
+        summary = self.type_manager.get_type_summary('test_struct')
+        
+        self.assertEqual(summary['name'], 'test_struct')
+        self.assertEqual(summary['category'], 'struct')
+        self.assertTrue(summary['size_info']['size'] > 0)
+        self.assertTrue(len(summary['dependencies']) > 0)
+
+    def test_type_qualifiers(self):
+        """测试类型限定符"""
+        type_str = 'const volatile int* restrict'
+        parsed = self.type_manager.parse_type_string(type_str)
+        
+        self.assertTrue(parsed['is_const'])
+        self.assertTrue(parsed['is_volatile'])
+        self.assertTrue(parsed['is_restrict'])
+        self.assertEqual(parsed['pointer_level'], 1)
+        self.assertEqual(parsed['base_type'], 'int')
+
+    def test_type_attributes(self):
+        """测试类型属性"""
+        struct_info = {
+            'kind': 'struct',
+            'name': 'packed_struct',
+            'fields': [{'name': 'x', 'type': 'char'}],
+            'attributes': {
+                'packed': True,
+                'aligned': 1,
+                'deprecated': True
+            }
+        }
+        self.type_manager.add_struct_type('packed_struct', struct_info)
+        
+        attrs = self.type_manager.get_type_attributes('packed_struct')
+        self.assertTrue(attrs['packed'])
+        self.assertEqual(attrs['aligned'], 1)
+        self.assertTrue(attrs['deprecated'])
+
+
+class TestTypeManagerScope(unittest.TestCase):
+    """测试类型作用域功能"""
+    
+    def setUp(self):
+        self.type_manager = TypeManager()
+
+    def test_scope_management(self):
+        """测试作用域管理"""
+        # 添加全局类型
+        global_info = {
+            'typedef_types': {'global_int': 'int'},
+            'struct_types': ['global_struct'],
+            'struct_info': {
+                'global_struct': {
+                    'kind': 'struct',
+                    'name': 'global_struct',
+                    'fields': []
+                }
+            }
+        }
+        self.type_manager.merge_type_info(global_info, to_global=True)
+        
+        # 添加文件作用域类型
+        self.type_manager.add_typedef_type('file_int', 'int')
+        
+        # 测试作用域判断
+        self.assertEqual(self.type_manager.get_type_scope('global_int'), 'global')
+        self.assertEqual(self.type_manager.get_type_scope('file_int'), 'file')
+        self.assertEqual(self.type_manager.get_type_scope('int'), 'global')
+        self.assertEqual(self.type_manager.get_type_scope('unknown_type'), 'unknown')
+
+    def test_scope_reset(self):
+        """测试作用域重置"""
+        # 添加一些类型
+        self.type_manager.add_typedef_type('file_type', 'int')
+        self.type_manager.add_struct_type('file_struct', {'kind': 'struct', 'name': 'file_struct', 'fields': []})
+        
+        # 重置当前文件作用域
+        self.type_manager.reset_current_type_info()
+        
+        # 验证重置结果
+        self.assertFalse(self.type_manager.is_typedef_type('file_type'))
+        self.assertFalse(self.type_manager.is_struct_type('file_struct'))
+
+
+if __name__ == '__main__':
+    unittest.main() 

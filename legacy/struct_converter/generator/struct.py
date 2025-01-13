@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from .base import BaseGenerator
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 
-logger = setup_logger('StructGenerator')
+
 
 class StructGenerator(BaseGenerator):
     """结构体代码生成器"""

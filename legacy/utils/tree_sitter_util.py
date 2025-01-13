@@ -1,7 +1,7 @@
 from tree_sitter import Language, Parser
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 
-logger = setup_logger('TreeSitterUtil')
+
 
 
 class TreeSitterUtil:

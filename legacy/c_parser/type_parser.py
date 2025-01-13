@@ -1,9 +1,9 @@
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 from utils import ExpressionParser, TreeSitterUtil
 import json
 from .type_manager import TypeManager
 
-logger = setup_logger('TypeParser')
+
 
 class CTypeParser:
     """C语言声明解析器，负责解析类型定义、枚举和宏定义

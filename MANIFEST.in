@@ -1,4 +1,27 @@
-include src/struct_converter/templates/c/*.jinja
-include src/struct_converter/templates/python/*.jinja
+include LICENSE
 include README.md
-include LICENSE 
+include MANIFEST.in
+include pyproject.toml
+
+# 配置文件
+recursive-include config *.yaml
+
+# 模板文件
+recursive-include src/struct_converter/templates *.jinja
+recursive-include src/struct_converter/templates *.j2
+
+# 测试文件
+recursive-include tests *.py
+recursive-include tests/test_data *
+
+# 文档
+recursive-include docs *.rst
+recursive-include docs *.py
+recursive-include docs Makefile
+recursive-include docs/source *.rst
+
+# 排除
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store 

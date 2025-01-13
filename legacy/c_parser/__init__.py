@@ -1,5 +1,5 @@
 from pathlib import Path
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 from utils.cache_manager import CacheManager
 from .type_parser import CTypeParser
 from .data_parser import CDataParser
@@ -8,7 +8,7 @@ import json
 
 __all__ = ['CParser', 'TypeManager', 'CTypeParser', 'CDataParser']
 
-logger = setup_logger('CParser')
+
 
 class CParser:
     """C语言解析器，负责解析头文件和源文件"""

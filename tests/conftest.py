@@ -1,22 +1,17 @@
+import pytest
 import os
-import sys
-from pathlib import Path
-
-# 添加源代码目录到 Python 路径
-src_path = str(Path(__file__).parent.parent / "src")
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
 
 @pytest.fixture
-def test_data_dir():
-    return Path(__file__).parent / "test_data"
+def test_files_dir():
+    """返回测试文件目录路径"""
+    return os.path.join(os.path.dirname(__file__), 'fixtures')
 
 @pytest.fixture
-def parser():
-    from c_parser.data_parser import CDataParser
-    return CDataParser()
+def c_files_dir(test_files_dir):
+    """返回C源文件目录路径"""
+    return os.path.join(test_files_dir, 'c_files')
 
 @pytest.fixture
-def generator():
-    from struct_converter.generator.struct import StructGenerator
-    return StructGenerator({}) 
+def expected_files_dir(test_files_dir):
+    """返回期望输出文件目录路径"""
+    return os.path.join(test_files_dir, 'expected') 

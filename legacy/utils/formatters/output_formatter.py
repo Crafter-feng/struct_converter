@@ -1,8 +1,8 @@
-from utils.logger_config import setup_logger
+from utils.logger import logger 
 import click
 import json
 
-logger = setup_logger('OutputFormatter')
+
 
 
 class OutputFormatter:
