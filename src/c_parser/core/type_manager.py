@@ -398,21 +398,14 @@ class TypeManager:
         # 清理类型名称
         clean_name = self._clean_type_name(type_name)
         
-        # 检查是否是其他已知类型
-        if (clean_name in self._global_struct_types or clean_name in self._current_struct_types or
-            clean_name in self._global_union_types or clean_name in self._current_union_types or
-            clean_name in self._global_enum_types or clean_name in self._current_enum_types or
-            clean_name in self._global_pointer_types or clean_name in self._current_pointer_types or
-            clean_name in self._global_typedef_types or clean_name in self._current_typedef_types):  # 添加 typedef 检查
-            return False
-            
-        # 检查是否是基本类型
+        # 先检查是否是基本类型
         if clean_name in self.BASIC_TYPES:
             return True
-            
-        # 检查是否是类型别名，并递归检查其实际类型
-        if clean_name in self.TYPE_ALIASES:  # 修改这里，不再递归检查类型别名
-            return False
+        
+        # 检查类型别名，并递归检查其实际类型
+        real_type = self.get_real_type(clean_name)
+        if real_type != clean_name:
+            return self.is_basic_type(real_type)
             
         return False
         
@@ -543,12 +536,22 @@ class TypeManager:
     
     def _clean_type_name(self, type_name: str) -> str:
         """清理类型名称，移除前缀和修饰符"""
+        logger.debug(f"Cleaning type name: {type_name}")
+        
         if isinstance(type_name, dict):
             type_name = type_name.get('base_type', '')
+            logger.debug(f"Extracted base_type from dict: {type_name}")
         
         # 移除 struct/union/enum 前缀和指针符号
-        clean_name = type_name.replace('struct ', '').replace('union ', '').replace('enum ', '').rstrip('*')
-        return clean_name.strip()
+        clean_name = type_name.replace('struct ', '').replace('union ', '').replace('enum ', '')
+        logger.debug(f"After removing prefixes: {clean_name}")
+        
+        # 不要移除指针符号，因为它们在类型兼容性检查中很重要
+        # clean_name = clean_name.rstrip('*')
+        
+        result = clean_name.strip()
+        logger.debug(f"Final cleaned name: {result}")
+        return result
     
     def get_printf_format(self, type_name: str) -> str:
         """获取类型的printf格式化字符串
@@ -912,45 +915,86 @@ class TypeManager:
         return ''
 
     def is_compatible_types(self, type1: str, type2: str) -> bool:
-        """检查两个类型是否兼容
+        """检查两个类型是否兼容"""
+        logger.debug(f"\n=== Checking type compatibility ===")
+        logger.debug(f"Type1: {type1}")
+        logger.debug(f"Type2: {type2}")
         
-        Args:
-            type1: 第一个类型名称
-            type2: 第二个类型名称
-        
-        Returns:
-            如果类型兼容返回True，否则返回False
-        """
-        # 清理类型名称中的空格和*
-        type1 = type1.replace(' ', '')
-        type2 = type2.replace(' ', '')
-        
-        # 获取实际类型
-        real_type1 = self.get_real_type(type1)
-        real_type2 = self.get_real_type(type2)
+        # 清理类型名称
+        type1 = self._clean_type_name(type1)
+        type2 = self._clean_type_name(type2)
+        logger.debug(f"Cleaned types - Type1: {type1}, Type2: {type2}")
         
         # 处理指针类型
         if '*' in type1 or '*' in type2:
-            # void* 可以与任何指针类型兼容
-            if 'void*' in (type1, type2):
-                return '*' in type1 and '*' in type2
-            # 检查指针级别是否相同
-            if type1.count('*') != type2.count('*'):
-                return False
-            # 去掉指针后比较基本类型
-            base1 = real_type1.rstrip('*')
-            base2 = real_type2.rstrip('*')
-            return base1 == base2 or 'void' in (base1, base2)
+            logger.debug("Processing pointer types")
             
+            # 检查是否都是指针类型
+            if '*' not in type1 or '*' not in type2:
+                logger.debug("One type is not pointer - incompatible")
+                return False
+            
+            # 获取指针级别
+            ptr_level1 = type1.count('*')
+            ptr_level2 = type2.count('*')
+            logger.debug(f"Pointer levels - Type1: {ptr_level1}, Type2: {ptr_level2}")
+            
+            if ptr_level1 != ptr_level2:
+                logger.debug("Different pointer levels - incompatible")
+                return False
+            
+            # 获取基本类型（去掉所有指针）
+            base1 = type1.rstrip('*')
+            base2 = type2.rstrip('*')
+            logger.debug(f"Base types - Type1: {base1}, Type2: {base2}")
+            
+            # 获取实际类型（解析类型别名）
+            real_base1 = self.get_real_type(base1)
+            real_base2 = self.get_real_type(base2)
+            logger.debug(f"Real base types - Type1: {real_base1}, Type2: {real_base2}")
+            
+            # void* 可以与任何指针类型兼容
+            # 注意：这里需要检查原始类型和解析后的类型
+            if ('void' in (base1, base2) or 
+                'void' in (real_base1, real_base2)):
+                logger.debug("void* compatibility check passed")
+                return True
+            
+            # 检查基本类型是否兼容
+            if real_base1 in self.BASIC_TYPES and real_base2 in self.BASIC_TYPES:
+                logger.debug("Checking basic type compatibility")
+                type1_info = self.BASIC_TYPES[real_base1]
+                type2_info = self.BASIC_TYPES[real_base2]
+                result = (type1_info['size'] == type2_info['size'] and 
+                         type1_info.get('signed') == type2_info.get('signed'))
+                logger.debug(f"Basic type compatibility result: {result}")
+                return result
+            
+            # 其他情况，类型必须完全相同
+            result = real_base1 == real_base2
+            logger.debug(f"Type equality check result: {result}")
+            return result
+        
+        # 非指针类型的处理
+        logger.debug("Processing non-pointer types")
+        real_type1 = self.get_real_type(type1)
+        real_type2 = self.get_real_type(type2)
+        logger.debug(f"Real types - Type1: {real_type1}, Type2: {real_type2}")
+        
         # 处理基本类型
         if real_type1 in self.BASIC_TYPES and real_type2 in self.BASIC_TYPES:
+            logger.debug("Checking basic type compatibility")
             type1_info = self.BASIC_TYPES[real_type1]
             type2_info = self.BASIC_TYPES[real_type2]
-            return (type1_info['size'] == type2_info['size'] and 
-                   type1_info.get('signed') == type2_info.get('signed'))
-                   
+            result = (type1_info['size'] == type2_info['size'] and 
+                     type1_info.get('signed') == type2_info.get('signed'))
+            logger.debug(f"Basic type compatibility result: {result}")
+            return result
+        
         # 其他情况，类型必须完全相同
-        return real_type1 == real_type2
+        result = real_type1 == real_type2
+        logger.debug(f"Final type equality check result: {result}")
+        return result
 
     def get_enum_value(self, enum_name: str, value_name: str) -> Optional[Any]:
         """获取枚举值
@@ -1293,14 +1337,7 @@ class TypeManager:
         return dependencies
 
     def get_type_hierarchy(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的层次结构
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            包含类型层次结构的字典
-        """
+        """获取类型的层次结构"""
         visited = set()
         
         def build_hierarchy(current_type: str) -> Dict[str, Any]:
@@ -1310,14 +1347,20 @@ class TypeManager:
             visited.add(current_type)
             hierarchy = {'name': current_type}
             
+            # 处理指针类型
+            if self.is_pointer_type(current_type):
+                hierarchy['type'] = 'pointer'
+                base_type = current_type.rstrip('*')
+                if base_type and base_type not in visited:
+                    hierarchy['base_type'] = build_hierarchy(base_type)
+                return hierarchy
+            
             # 获取实际类型
             real_type = self.get_real_type(current_type)
             
             # 确定类型种类
             if self.is_basic_type(real_type):
                 hierarchy['type'] = 'basic'
-                if real_type in self.BASIC_TYPES:
-                    hierarchy['info'] = self.BASIC_TYPES[real_type]
             elif self.is_struct_type(real_type):
                 hierarchy['type'] = 'struct'
                 hierarchy['fields'] = []
@@ -1328,33 +1371,8 @@ class TypeManager:
                         if field_type:
                             field_hierarchy = build_hierarchy(field_type)
                             field_hierarchy['field_name'] = field.get('name', '')
-                            field_hierarchy['offset'] = self.calculate_field_offset(real_type, field.get('name', ''))
                             hierarchy['fields'].append(field_hierarchy)
-            elif self.is_union_type(real_type):
-                hierarchy['type'] = 'union'
-                hierarchy['fields'] = []
-                union_info = self.get_union_info(real_type)
-                for field in union_info.get('fields', []):
-                    if isinstance(field, dict):
-                        field_type = field.get('type', '')
-                        if field_type:
-                            field_hierarchy = build_hierarchy(field_type)
-                            field_hierarchy['field_name'] = field.get('name', '')
-                            hierarchy['fields'].append(field_hierarchy)
-            elif self.is_enum_type(real_type):
-                hierarchy['type'] = 'enum'
-                hierarchy['values'] = self.get_enum_values(real_type)
-            elif self.is_pointer_type(real_type):
-                hierarchy['type'] = 'pointer'
-                base_type = real_type.rstrip('*')
-                if base_type:
-                    hierarchy['base_type'] = build_hierarchy(base_type)
-            elif self.is_typedef_type(real_type):
-                hierarchy['type'] = 'typedef'
-                base_type = self._current_typedef_types.get(real_type) or self._global_typedef_types.get(real_type)
-                if base_type:
-                    hierarchy['base_type'] = build_hierarchy(base_type)
-                
+            
             visited.remove(current_type)
             return hierarchy
         
@@ -1388,16 +1406,36 @@ class TypeManager:
         return type_info.get('packed', False)
 
     def get_type_attributes(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的属性信息
+        """获取类型的属性信息"""
+        # 获取类型信息
+        type_info = None
+        if self.is_struct_type(type_name):
+            type_info = self.get_struct_info(type_name)
+        elif self.is_union_type(type_name):
+            type_info = self.get_union_info(type_name)
+        elif type_name in self.type_info:
+            type_info = self.type_info[type_name]
         
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            包含类型属性的字典
-        """
-        type_info = self.get_type_details(type_name)
-        return type_info.get('attributes', {})
+        if not type_info:
+            return {}
+        
+        # 合并所有属性
+        attributes = {}
+        # 从 attributes 字段获取
+        attributes.update(type_info.get('attributes', {}))
+        # 从 details 字段获取
+        details = type_info.get('details', {})
+        if details:
+            attributes.update({
+                'packed': details.get('packed', False),
+                'alignment': details.get('alignment'),
+                'visibility': details.get('visibility')
+            })
+        # 从类型信息直接获取
+        if 'packed' in type_info:
+            attributes['packed'] = type_info['packed']
+        
+        return attributes
 
     def get_type_metadata(self, type_name: str) -> Dict[str, Any]:
         """获取类型的元数据

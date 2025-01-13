@@ -105,7 +105,7 @@ class CTypeParser:
             try:
                 type_info = self.type_manager.export_type_info()
                 self.logger.info("=== Parsing completed ===")
-                self.logger.debug(f"解析结果: {json.dumps(type_info, indent=2)}")
+                #self.logger.debug(f"解析结果: {json.dumps(type_info, indent=2)}")
 
                 self.logger.info("解析完成，统计信息:")
                 self.logger.info(f"- 类型定义(typedef): {len(type_info['typedef_types'])} 个")
@@ -406,7 +406,11 @@ class CTypeParser:
             for child in node.children:
                 if child.type == 'type_identifier':
                     base_name = child.text.decode('utf8')
-                    struct_name = f"struct {base_name}"
+                    # 检查是否已经包含 "struct" 前缀
+                    if not base_name.startswith('struct '):
+                        struct_name = f"struct {base_name}"
+                    else:
+                        struct_name = base_name
                     self.logger.info(f"Found struct name: {struct_name}")
                     break
             
@@ -416,9 +420,16 @@ class CTypeParser:
                     for field_node in child.children:
                         if field_node.type == 'field_declaration':
                             field_info = self._parse_field(field_node)
-                            if field_info and field_info['name']:
+                            if field_info:
+                                # 处理指针类型
+                                field_type = field_info.get('type', '')
+                                if '*' in field_type:
+                                    # 确保指针类型被正确注册
+                                    self.type_manager.register_pointer_type(field_type)
+                                    self.logger.debug(f"Registered pointer type: {field_type}")
+                                
                                 fields.append(field_info)
-                                self.logger.debug(f"Added field: {field_info['name']}")
+                                self.logger.debug(f"Added field: {field_info['name']}, type: {field_info.get('type')}")
             
             # 3. 检查字段有效性
             if fields:
@@ -432,6 +443,72 @@ class CTypeParser:
                         self.logger.debug(f"字段 {field['name']} 包含 {len(field['nested_fields'])} 个嵌套字段")
             else:
                 self.logger.warning("未找到任何字段")
+            
+            # 计算结构体的大小和对齐信息
+            total_size = 0
+            alignment = 1
+            for field in fields:
+                field_type = field.get('type')
+                field_size = self.type_manager.get_type_size(field_type)
+                field_align = self.type_manager.get_type_alignment(field_type)
+                
+                # 更新结构体对齐要求
+                alignment = max(alignment, field_align)
+                
+                # 计算字段偏移量
+                if total_size % field_align != 0:
+                    total_size = ((total_size + field_align - 1) // field_align) * field_align
+                field['offset'] = total_size
+                
+                # 更新总大小
+                total_size += field_size
+            
+            # 确保最终大小满足对齐要求
+            if total_size % alignment != 0:
+                total_size = ((total_size + alignment - 1) // alignment) * alignment
+            
+            # 获取属性和元数据
+            attributes = {}
+            location = {'file': 'unknown', 'line': 0}
+            comment = None
+            
+            # 尝试获取位置信息
+            try:
+                start_point = node.start_point
+                location = {
+                    'file': self.current_file,
+                    'line': start_point[0] + 1
+                }
+            except Exception as e:
+                self.logger.warning(f"Failed to get location info: {e}")
+            
+            # 尝试获取注释
+            try:
+                comment_node = node.prev_sibling
+                if comment_node and comment_node.type == 'comment':
+                    comment = comment_node.text.decode('utf8').strip('/* \n\t')
+            except Exception as e:
+                self.logger.warning(f"Failed to get comment: {e}")
+            
+            # 添加结构体类型并打印信息
+            type_info = {
+                'kind': 'struct',
+                'name': struct_name,
+                'fields': fields,
+                'size': total_size,
+                'alignment': alignment,
+                'attributes': attributes,
+                'location': location,
+                'comment': comment
+            }
+            
+            # 检查是否有相关的指针类型需要注册
+            pointer_type = f"{struct_name}*"
+            if self.type_manager.is_pointer_type(pointer_type):
+                self.type_manager.register_pointer_type(pointer_type)
+                self.logger.debug(f"Registered associated pointer type: {pointer_type}")
+            
+            self._add_type_with_logging(struct_name, type_info)
             
             return struct_name, fields
             
@@ -555,6 +632,40 @@ class CTypeParser:
             else:
                 self.logger.warning("未找到任何枚举值")
             
+            # 获取属性和元数据
+            attributes = {}
+            location = {'file': 'unknown', 'line': 0}
+            comment = None
+            
+            # 尝试获取位置信息
+            try:
+                start_point = node.start_point
+                location = {
+                    'file': self.current_file,
+                    'line': start_point[0] + 1
+                }
+            except Exception as e:
+                self.logger.warning(f"Failed to get location info: {e}")
+            
+            # 尝试获取注释
+            try:
+                comment_node = node.prev_sibling
+                if comment_node and comment_node.type == 'comment':
+                    comment = comment_node.text.decode('utf8').strip('/* \n\t')
+            except Exception as e:
+                self.logger.warning(f"Failed to get comment: {e}")
+            
+            # 添加枚举类型并打印信息
+            self._add_type_with_logging(enum_name, {
+                'kind': 'enum',
+                'name': enum_name,
+                'values': enum_values,
+                'size': 4,  # 通常枚举类型是int大小
+                'alignment': 4,
+                'location': location,
+                'comment': comment
+            })
+            
             return enum_name, enum_values
             
         except Exception as e:
@@ -614,21 +725,11 @@ class CTypeParser:
                             macro_value = text if text.startswith(("'", '"')) else f'"{text}"'
                             self.logger.debug(f"Parsed string value: {macro_value}")
                         else:
-                            # 尝试计算表达式
-                            try:
-                                result = ExpressionParser.evaluate_expression(text)
-                                if isinstance(result, (int, float)):
-                                    macro_value = result
-                                    self.logger.debug(f"Evaluated expression to: {result}")
-                                else:
-                                    macro_value = text
-                                    self.logger.debug(f"Using original text as value: {text}")
-                            except Exception as e:
-                                self.logger.warning(f"Expression evaluation failed: {e}")
-                                macro_value = text
+                            self.logger.error(f"Expression evaluation failed: {text}")
+                            macro_value = text
                             
                     except Exception as e:
-                        self.logger.error(f"Error parsing macro value: {text}, error: {e}")
+                        self.logger.exception(f"Error parsing macro value: {text}, error: {e}")
                         macro_value = text
             
             if macro_name and macro_value is not None:
@@ -1019,3 +1120,65 @@ class CTypeParser:
         except Exception as e:
             self.logger.error(f"解析位域值失败: {text}, 错误: {e}")
             return None, text 
+
+    def _print_type_info(self, type_name: str, type_info: Dict[str, Any], indent: int = 0):
+        """打印类型信息
+        
+        Args:
+            type_name: 类型名称
+            type_info: 类型信息字典
+            indent: 缩进级别
+        """
+        prefix = "  " * indent
+        kind = type_info.get('kind', 'unknown')
+        
+        self.logger.info(f"\n{prefix}=== Type: {type_name} ({kind}) ===")
+        
+        # 打印基本信息
+        if 'size' in type_info:
+            self.logger.info(f"{prefix}Size: {type_info['size']} bytes")
+        if 'alignment' in type_info:
+            self.logger.info(f"{prefix}Alignment: {type_info['alignment']} bytes")
+        
+        # 打印类型特定信息
+        if kind == 'struct' or kind == 'union':
+            self.logger.info(f"{prefix}Fields:")
+            for field in type_info.get('fields', []):
+                field_type = field.get('type', 'unknown')
+                field_name = field.get('name', 'unnamed')
+                field_offset = field.get('offset', 0)
+                self.logger.info(f"{prefix}  - {field_name}: {field_type} (offset: {field_offset})")
+                
+                # 打印嵌套字段
+                if isinstance(field_type, dict):
+                    self._print_type_info(field_name, field_type, indent + 2)
+                
+        elif kind == 'enum':
+            self.logger.info(f"{prefix}Values:")
+            for name, value in type_info.get('values', {}).items():
+                self.logger.info(f"{prefix}  - {name} = {value}")
+                
+        elif kind == 'typedef':
+            base_type = type_info.get('base_type', 'unknown')
+            self.logger.info(f"{prefix}Base type: {base_type}")
+            
+            # 如果基类型是复杂类型，递归打印
+            if isinstance(base_type, dict):
+                self._print_type_info(f"{type_name}_base", base_type, indent + 1)
+        
+        # 打印属性和元数据
+        if 'attributes' in type_info:
+            self.logger.info(f"{prefix}Attributes: {type_info['attributes']}")
+        if 'location' in type_info:
+            loc = type_info['location']
+            self.logger.info(f"{prefix}Defined at: {loc.get('file', 'unknown')}:{loc.get('line', '?')}")
+        if 'comment' in type_info:
+            self.logger.info(f"{prefix}Comment: {type_info['comment']}")
+
+    def _add_type_with_logging(self, type_name: str, type_info: Dict[str, Any]):
+        """添加类型并打印详细信息"""
+        # 添加类型
+        self.type_manager.register_type(type_name, type_info)
+        
+        # 打印类型信息
+        self._print_type_info(type_name, type_info) 

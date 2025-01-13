@@ -2,136 +2,169 @@ from typing import Dict, Any, Tuple, Optional
 from loguru import logger
 
 class ExpressionParser:
-    """表达式解析器"""
+    """表达式解析和计算工具类"""
     
-    def __init__(self):
-        """初始化表达式解析器"""
-        self.logger = logger.bind(name="ExpressionParser")
-        self.operators = {
-            '+': lambda x, y: x + y,
-            '-': lambda x, y: x - y,
-            '*': lambda x, y: x * y,
-            '/': lambda x, y: x / y,
-            '%': lambda x, y: x % y,
-            '<<': lambda x, y: x << y,
-            '>>': lambda x, y: x >> y,
-            '&': lambda x, y: x & y,
-            '|': lambda x, y: x | y,
-            '^': lambda x, y: x ^ y,
-            '~': lambda x: ~x,
-            '!': lambda x: not x,
-            '&&': lambda x, y: x and y,
-            '||': lambda x, y: x or y,
-            '==': lambda x, y: x == y,
-            '!=': lambda x, y: x != y,
-            '<': lambda x, y: x < y,
-            '<=': lambda x, y: x <= y,
-            '>': lambda x, y: x > y,
-            '>=': lambda x, y: x >= y
-        }
-
-    @classmethod
-    def parse(cls, expr: str, enum_values: Dict[str, Any], macro_values: Dict[str, Any]) -> Tuple[Any, str]:
-        """解析表达式
+    @staticmethod
+    def parse(expr, enum_values=None, macro_values=None):
+        """解析表达式，返回结果和类型"""
+        if isinstance(expr, bytes):
+            expr = expr.decode('utf8')
+        expr = expr.strip()
         
-        Args:
-            expr: 表达式字符串
-            enum_values: 枚举值字典
-            macro_values: 宏定义字典
+        # 检查合并enum_values
+        if enum_values:
+            enum_values = {k: v for d in enum_values.values() for k, v in d.items()}
             
-        Returns:
-            Tuple[Any, str]: (解析结果, 结果类型)
-        """
+        logger.debug(f"=== Parsing Expression ===")
+        logger.debug(f"Input expression: {expr}")
+        logger.debug(f"Available enum values: {enum_values}")
+        logger.debug(f"Available macro values: {macro_values}")
+        
+        # 1. 检查字符串字面量
+        if expr.startswith(("'", '"')) and expr.endswith(("'", '"')):
+            logger.debug(f"Detected string literal: {expr}")
+            return expr, 'string'
+        
+        # 2. 检查数字字面量
         try:
-            parser = cls()
-            # 首先尝试从枚举值和宏定义中查找
-            if expr in enum_values:
-                return enum_values[expr], 'enum'
-            if expr in macro_values:
-                return macro_values[expr], 'macro'
-                
-            # 尝试解析数值
-            try:
-                # 十六进制
-                if expr.startswith('0x') or expr.startswith('0X'):
-                    return int(expr, 16), 'int'
-                # 八进制
-                elif expr.startswith('0'):
-                    return int(expr, 8), 'int'
-                # 十进制
-                else:
-                    return int(expr), 'int'
-            except ValueError:
-                pass
-                
-            # 尝试解析表达式
-            result = parser._evaluate_expression(expr, enum_values, macro_values)
+            value = ExpressionParser._parse_number(expr)
+            logger.debug(f"Parsed number: {value}")
+            return value, 'number'
+        except ValueError:
+            logger.warning(f"Failed to parse number: {expr}")
+        
+        # 3. 处理表达式
+        try:
+            # 首先替换所有变量
+            processed_expr = ExpressionParser._replace_variables(expr, enum_values, macro_values)
+            logger.debug(f"After variable replacement: {processed_expr}")
+            
+            # 然后尝试计算表达式
+            result = ExpressionParser._evaluate(processed_expr)
+            logger.debug(f"After evaluation: {result}")
+            
+            if isinstance(result, (int, float)):
+                logger.debug(f"Final result (number): {result}")
+                return result, 'number'
+            
+            logger.debug(f"Final result (expression): {result}")
             return result, 'expression'
             
         except Exception as e:
-            logger.error(f"Failed to parse expression string {expr}: {e}")
-            return expr, 'error'
-
-    def _evaluate_expression(self, expr: str, enum_values: Dict[str, Any], macro_values: Dict[str, Any]) -> Any:
+            logger.exception(f"Failed to parse expression: {expr}, error: {e}")
+            return expr, 'expression'
+    
+    @staticmethod
+    def _parse_number(expr):
+        """解析数字字面量"""
+        expr = expr.strip()
+        
+        try:
+            # 十六进制
+            if expr.startswith(('0x', '0X')):
+                return int(expr.rstrip('ULul'), 16)
+            # 二进制
+            elif expr.startswith(('0b', '0B')):
+                return int(expr.rstrip('ULul')[2:], 2)
+            # 八进制
+            elif expr.startswith('0') and len(expr) > 1 and expr[1].isdigit():
+                return int(expr.rstrip('ULul'), 8)
+            # 浮点数
+            elif '.' in expr or 'e' in expr.lower():
+                return float(expr.rstrip('fFlL'))
+            # 整数
+            else:
+                return int(expr.rstrip('ULul'))
+        except ValueError:
+            raise ValueError(f"Invalid number format: {expr}")
+    
+    @staticmethod
+    def _replace_variables(expr, enum_values=None, macro_values=None):
+        """替换表达式中的变量引用"""
+        if not expr:
+            return expr
+        
+        logger.debug(f"--- Variable Replacement ---")
+        logger.debug(f"Input: {expr}")
+        
+        # 标准化运算符
+        expr = ' '.join(expr.split())  # 标准化空格
+        for op in ['<<', '>>', '|', '&', '^', '~', '+', '-', '*', '/', '(', ')']:
+            expr = expr.replace(op, f" {op} ")
+        logger.debug(f"After operator normalization: {expr}")
+        
+        # 分割并处理每个标记
+        tokens = [t for t in expr.split() if t]
+        logger.debug(f"Tokens: {tokens}")
+        processed_tokens = []
+        
+        for token in tokens:
+            logger.debug(f"Processing token: {token}")
+            # 保留运算符
+            if token in ['<<', '>>', '|', '&', '^', '~', '+', '-', '*', '/', '(', ')']:
+                logger.debug(f"Operator token: {token}")
+                processed_tokens.append(token)
+                continue
+            
+            # 替换变量
+            value = None
+            if enum_values and token in enum_values:
+                value = enum_values[token]
+                logger.debug(f"Found enum value: {token} = {value}")
+            elif macro_values and token in macro_values:
+                value = macro_values[token]
+                logger.debug(f"Found macro value: {token} = {value}")
+            
+            if value is not None:
+                if isinstance(value, (int, float)):
+                    processed_tokens.append(str(value))
+                    logger.debug(f"Added numeric value: {value}")
+                else:
+                    # 递归处理引用的值
+                    result, _ = ExpressionParser.parse(str(value), enum_values, macro_values)
+                    processed_tokens.append(str(result))
+                    logger.debug(f"Added processed value: {result}")
+            else:
+                # 尝试解析为数字
+                try:
+                    value = ExpressionParser._parse_number(token)
+                    processed_tokens.append(str(value))
+                    logger.debug(f"Parsed as number: {value}")
+                except ValueError:
+                    processed_tokens.append(token)
+                    logger.debug(f"Kept as is: {token}")
+        
+        result = ' '.join(processed_tokens)
+        logger.debug(f"Final processed expression: {result}")
+        return result
+    
+    @staticmethod
+    def _evaluate(expr):
         """计算表达式的值"""
         try:
-            # 处理括号
-            if '(' in expr:
-                return self._evaluate_parentheses(expr, enum_values, macro_values)
-                
-            # 处理运算符
-            for op in self.operators:
-                if op in expr:
-                    left, right = expr.split(op, 1)
-                    left_val = self._evaluate_expression(left.strip(), enum_values, macro_values)
-                    right_val = self._evaluate_expression(right.strip(), enum_values, macro_values)
-                    return self.operators[op](left_val, right_val)
-                    
-            # 处理标识符
-            expr = expr.strip()
-            if expr in enum_values:
-                return enum_values[expr]
-            if expr in macro_values:
-                return macro_values[expr]
-                
-            # 尝试解析数值
-            try:
-                if expr.startswith('0x') or expr.startswith('0X'):
-                    return int(expr, 16)
-                elif expr.startswith('0'):
-                    return int(expr, 8)
-                else:
-                    return int(expr)
-            except ValueError:
-                return expr
-                
-        except Exception as e:
-            self.logger.error(f"Expression evaluation failed: {e}")
-            return expr
-
-    def _evaluate_parentheses(self, expr: str, enum_values: Dict[str, Any], macro_values: Dict[str, Any]) -> Any:
-        """处理带括号的表达式"""
-        try:
-            # 找到最内层括号
-            start = expr.rfind('(')
-            if start == -1:
-                return self._evaluate_expression(expr, enum_values, macro_values)
-                
-            end = expr.find(')', start)
-            if end == -1:
-                raise ValueError("Unmatched parentheses")
-                
-            # 计算括号内的表达式
-            inner_result = self._evaluate_expression(
-                expr[start + 1:end], 
-                enum_values, 
-                macro_values
-            )
+            logger.debug(f"--- Expression Evaluation ---")
+            logger.debug(f"Input: {expr}")
             
-            # 替换括号部分并继续计算
-            new_expr = expr[:start] + str(inner_result) + expr[end + 1:]
-            return self._evaluate_expression(new_expr, enum_values, macro_values)
+            # 检查是否所有token都是数值或运算符
+            tokens = expr.split()
+            operators = {'<<', '>>', '|', '&', '^', '~', '+', '-', '*', '/', '(', ')'}
+            logger.debug(f"Tokens: {tokens}")
+            
+            # 确保所有非运算符的token都是数字
+            for token in tokens:
+                if token not in operators:
+                    try:
+                        float(token)
+                        logger.debug(f"Valid numeric token: {token}")
+                    except ValueError:
+                        logger.debug(f"Non-numeric token found: {token}")
+                        return expr
+            
+            # 计算表达式
+            result = eval(expr)
+            logger.debug(f"Evaluation result: {result}")
+            return result
             
         except Exception as e:
-            self.logger.error(f"Parentheses evaluation failed: {e}")
+            logger.exception(f"Failed to evaluate expression: {expr}, error: {e}")
             return expr 

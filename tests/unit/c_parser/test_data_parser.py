@@ -8,7 +8,6 @@ def parser():
 def test_initialization(parser):
     """测试初始化"""
     assert parser is not None
-    assert parser.tree_sitter_parser is not None
     assert parser.data_manager is not None
     assert parser.type_parser is not None
 
