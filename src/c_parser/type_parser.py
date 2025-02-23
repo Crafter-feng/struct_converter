@@ -425,7 +425,7 @@ class CTypeParser:
                                 field_type = field_info.get('type', '')
                                 if '*' in field_type:
                                     # 确保指针类型被正确注册
-                                    self.type_manager.register_pointer_type(field_type)
+                                    self.type_manager.add_pointer_type(field_type)
                                     self.logger.debug(f"Registered pointer type: {field_type}")
                                 
                                 fields.append(field_info)
@@ -505,7 +505,7 @@ class CTypeParser:
             # 检查是否有相关的指针类型需要注册
             pointer_type = f"{struct_name}*"
             if self.type_manager.is_pointer_type(pointer_type):
-                self.type_manager.register_pointer_type(pointer_type)
+                self.type_manager.add_pointer_type(pointer_type)
                 self.logger.debug(f"Registered associated pointer type: {pointer_type}")
             
             self._add_type_with_logging(struct_name, type_info)
@@ -513,7 +513,7 @@ class CTypeParser:
             return struct_name, fields
             
         except Exception as e:
-            self.logger.error(f"结构体解析错误: {str(e)}")
+            self.logger.exception(f"结构体解析错误: {str(e)}")
             return None, None
 
     def _parse_union_definition(self, node):
@@ -566,7 +566,7 @@ class CTypeParser:
             return union_name, fields
             
         except Exception as e:
-            self.logger.error(f"联合体解析错误: {str(e)}")
+            self.logger.exception(f"联合体解析错误: {str(e)}")
             return None, None
 
     def _parse_enum_definition(self, node):
@@ -619,7 +619,7 @@ class CTypeParser:
                                         else:
                                             self.logger.warning(f"Invalid enumerator value: {enum_child.text.decode('utf8')}")
                                     except Exception as e:
-                                        self.logger.error(f"Error parsing enumerator value: {e}")
+                                        self.logger.exception(f"Error parsing enumerator value: {e}")
                             
                             if enumerator_name:
                                 enum_values[enumerator_name] = enumerator_value
@@ -645,7 +645,7 @@ class CTypeParser:
                     'line': start_point[0] + 1
                 }
             except Exception as e:
-                self.logger.warning(f"Failed to get location info: {e}")
+                self.logger.exception(f"Failed to get location info: {e}")
             
             # 尝试获取注释
             try:
@@ -653,7 +653,7 @@ class CTypeParser:
                 if comment_node and comment_node.type == 'comment':
                     comment = comment_node.text.decode('utf8').strip('/* \n\t')
             except Exception as e:
-                self.logger.warning(f"Failed to get comment: {e}")
+                self.logger.exception(f"Failed to get comment: {e}")
             
             # 添加枚举类型并打印信息
             self._add_type_with_logging(enum_name, {
@@ -669,7 +669,7 @@ class CTypeParser:
             return enum_name, enum_values
             
         except Exception as e:
-            self.logger.error(f"枚举解析错误: {str(e)}")
+            self.logger.exception(f"枚举解析错误: {str(e)}")
             return None, None
 
     def _parse_macro_definition(self, node):
@@ -740,7 +740,7 @@ class CTypeParser:
             return macro_name, macro_value
             
         except Exception as e:
-            self.logger.error(f"宏定义解析错误: {str(e)}")
+            self.logger.exception(f"宏定义解析错误: {str(e)}")
             return None, None
 
     def _parse_field(self, node):
@@ -879,7 +879,7 @@ class CTypeParser:
             return field_info
             
         except Exception as e:
-            self.logger.error(f"字段解析错误: {str(e)}")
+            self.logger.exception(f"字段解析错误: {str(e)}")
             return None
 
     def _parse_array_dimensions(self, declarator):
@@ -944,7 +944,7 @@ class CTypeParser:
                         else:
                             self.logger.warning(f"Invalid array size value: {value}")
                     except Exception as e:
-                        self.logger.error(f"Error parsing array size: {e}")
+                        self.logger.exception(f"Error parsing array size: {e}")
                         
                 # 处理变量大小数组
                 elif child.type == 'identifier' and child.text.decode('utf8') != name:
@@ -1118,7 +1118,7 @@ class CTypeParser:
                 return None, text
             
         except Exception as e:
-            self.logger.error(f"解析位域值失败: {text}, 错误: {e}")
+            self.logger.exception(f"解析位域值失败: {text}, 错误: {e}")
             return None, text 
 
     def _print_type_info(self, type_name: str, type_info: Dict[str, Any], indent: int = 0):

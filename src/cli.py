@@ -227,6 +227,8 @@ def parse(header_file):
         if header_file:
             # 从头文件解析
             type_info = parser.parse_declarations(Path(header_file))
+            with open(Path(header_file).stem + ".json", "w") as f:
+                json.dump(type_info, f, indent=4)
         else:
             # 从缓存读取
             type_info = parser.get_type_info()
