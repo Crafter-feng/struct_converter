@@ -83,24 +83,18 @@ class TypeManager:
         """初始化类型管理器"""
         # 全局类型信息
         self._global_typedef_types = {}
-        self._global_struct_types = set()
-        self._global_union_types = set()
+        self._global_struct_types = []
+        self._global_union_types = []
         self._global_pointer_types = set()
-        self._global_struct_info = {}
-        self._global_union_info = {}
-        self._global_enum_types = set()
-        self._global_enum_info = {}
+        self._global_enum_types = []
         self._global_macro_definitions = {}
         
         # 当前文件的类型信息
         self._current_typedef_types = {}
-        self._current_struct_types = set()
-        self._current_union_types = set()
+        self._current_struct_types = []
+        self._current_union_types = []
         self._current_pointer_types = set()
-        self._current_struct_info = {}
-        self._current_union_info = {}
-        self._current_enum_types = set()
-        self._current_enum_info = {}
+        self._current_enum_types = []
         self._current_macro_definitions = {}
         
         # 添加新的类型管理相关属性
@@ -158,30 +152,15 @@ class TypeManager:
             
             # 处理结构体类型
             struct_types = type_info.get('struct_types', {})
-            if isinstance(struct_types, dict):
-                self._global_struct_types.update(struct_types.keys())
-                self._global_struct_info.update(struct_types)  # 直接使用 struct_types 作为 struct_info
-            else:
-                self._global_struct_types.update(struct_types)
-            self._global_struct_info.update(type_info.get('struct_info', {}))
+            self._global_struct_types.update(struct_types)
             
             # 处理联合体类型
             union_types = type_info.get('union_types', {})
-            if isinstance(union_types, dict):
-                self._global_union_types.update(union_types.keys())
-                self._global_union_info.update(union_types)  # 直接使用 union_types 作为 union_info
-            else:
-                self._global_union_types.update(union_types)
-            self._global_union_info.update(type_info.get('union_info', {}))
+            self._global_union_types.update(union_types)
             
             # 处理枚举类型
             enum_types = type_info.get('enum_types', {})
-            if isinstance(enum_types, dict):
-                self._global_enum_types.update(enum_types.keys())
-                self._global_enum_info.update(enum_types)  # 直接使用 enum_types 作为 enum_info
-            else:
-                self._global_enum_types.update(enum_types)
-            self._global_enum_info.update(type_info.get('enum_info', {}))
+            self._global_enum_types.update(enum_types)
             
             # 其他类型信息
             self._global_pointer_types.update(type_info.get('pointer_types', set()))
@@ -201,55 +180,6 @@ class TypeManager:
             logger.error(f"Failed to load type info: {e}")
             raise
 
-    def add_struct_type(self, type_name: str, type_info: Dict[str, Any], is_typedef: bool = False):
-        """添加结构体类型到当前文件"""
-        self._current_struct_types.add(type_name)
-        self._current_struct_info[type_name] = type_info
-        if is_typedef:
-            self._current_typedef_types[type_name] = type_name
-
-    def add_union_type(self, type_name: str, type_info: Dict[str, Any], is_typedef: bool = False):
-        """添加联合体类型到当前文件"""
-        self._current_union_types.add(type_name)
-        self._current_union_info[type_name] = type_info
-        if is_typedef:
-            self._current_typedef_types[type_name] = type_name
-
-    def add_enum_type(self, name: str, values: Dict[str, Any]) -> None:
-        """添加枚举类型
-        
-        Args:
-            name: 枚举类型名称
-            values: 枚举值字典
-        """
-        enum_info = {
-            'kind': 'enum',
-            'name': name,
-            'values': values,
-            'size': 4,  # 默认枚举大小为4字节
-            'alignment': 4  # 默认对齐为4字节
-        }
-        
-        # 更新类型信息
-        self._current_enum_types.add(name)
-        self._current_enum_info[name] = enum_info
-        self.type_info[name] = enum_info
-        
-        # 更新枚举值到宏定义
-        for enum_name, value in values.items():
-            if isinstance(value, (int, float)):
-                self._current_macro_definitions[enum_name] = value
-
-    def add_pointer_type(self, alias: str, is_typedef: bool = False):
-        """添加指针类型到当前文件"""
-        self._current_pointer_types.add(alias)
-        if is_typedef:
-            self._current_typedef_types[alias] = alias
-
-    def add_typedef_type(self, alias: str, target: str):
-        """添加类型别名到当前文件"""
-        self._current_typedef_types[alias] = target
-
     def add_macro_definition(self, name: str, value: Any) -> None:
         """添加宏定义
         
@@ -266,28 +196,16 @@ class TypeManager:
         typedef_types.update(self._current_typedef_types)
         
         # 合并结构体信息
-        struct_types = {}
-        struct_info = self._global_struct_info.copy()
-        struct_info.update(self._current_struct_info)
-        for name in self._global_struct_types.union(self._current_struct_types):
-            if name in struct_info:
-                struct_types[name] = struct_info[name]
+        struct_types = self._global_struct_types.copy()
+        struct_types.extend(self._current_struct_types)
         
         # 合并联合体信息
-        union_types = {}
-        union_info = self._global_union_info.copy()
-        union_info.update(self._current_union_info)
-        for name in self._global_union_types.union(self._current_union_types):
-            if name in union_info:
-                union_types[name] = union_info[name]
+        union_types = self._global_union_types.copy()
+        union_types.extend(self._current_union_types)
         
         # 合并枚举信息
-        enum_types = {}
-        enum_info = self._global_enum_info.copy()
-        enum_info.update(self._current_enum_info)
-        for name in self._global_enum_types.union(self._current_enum_types):
-            if name in enum_info:
-                enum_types[name] = enum_info[name]
+        enum_types = self._global_enum_types.copy()
+        enum_types.extend(self._current_enum_types)
         
         # 合并指针类型
         pointer_types = list(self._global_pointer_types.union(self._current_pointer_types))
@@ -299,11 +217,8 @@ class TypeManager:
         return {
             'typedef_types': typedef_types,
             'struct_types': struct_types,
-            'struct_info': struct_info,   
             'union_types': union_types,
-            'union_info': union_info,
             'enum_types': enum_types,
-            'enum_info': enum_info,
             'pointer_types': pointer_types,
             'macro_definitions': macro_definitions
         }
@@ -325,12 +240,9 @@ class TypeManager:
         """重置所有类型信息（包括全局和当前文件）"""
         # 重置全局类型信息
         self._global_typedef_types = {}
-        self._global_struct_types = set()
-        self._global_struct_info = {}
-        self._global_union_types = set()
-        self._global_union_info = {}
-        self._global_enum_types = set()
-        self._global_enum_info = {}
+        self._global_struct_types = []
+        self._global_union_types = []
+        self._global_enum_types = []
         self._global_pointer_types = set()
         self._global_macro_definitions = {}
         
@@ -341,44 +253,63 @@ class TypeManager:
         """获取结构体信息"""
         if struct_name:
             # 优先查找当前文件
-            if struct_name in self._current_struct_info:
-                return self._current_struct_info[struct_name]
+            if struct_name in self._current_struct_types:
+                return self._current_struct_types[struct_name]
             # 然后查找全局定义
-            return self._global_struct_info.get(struct_name, {})
+            return self._global_struct_types.get(struct_name, {})
         else:
             # 合并全局和当前文件的信息
-            merged_info = self._global_struct_info.copy()
-            merged_info.update(self._current_struct_info)
+            merged_info = self._global_struct_types.copy()
+            merged_info.extend(self._current_struct_types.copy())
             return merged_info
     
     def get_union_info(self, union_name: str = None) -> Dict[str, Any]:
         """获取联合体信息"""
         if union_name:
             # 优先查找当前文件
-            if union_name in self._current_union_info:
-                return self._current_union_info[union_name]
+            if union_name in self._current_union_types:
+                return self._current_union_types[union_name]
             # 然后查找全局定义
-            return self._global_union_info.get(union_name, {})
+            return self._global_union_types.get(union_name, {})
         else:
             # 合并全局和当前文件的信息
-            merged_info = self._global_union_info.copy()
-            merged_info.update(self._current_union_info)
+            merged_info = self._global_union_types.copy()
+            merged_info.extend(self._current_union_types.copy())
             return merged_info
     
     def get_enum_info(self, enum_name: str = None) -> Dict[str, Any]:
         """获取枚举信息"""
         if enum_name:
             # 优先查找当前文件
-            if enum_name in self._current_enum_info:
-                return self._current_enum_info[enum_name]
+            if enum_name in self._current_enum_types:
+                return self._current_enum_types[enum_name]
             # 然后查找全局定义
-            return self._global_enum_info.get(enum_name, {})
+            return self._global_enum_types.get(enum_name, {})
         else:
             # 合并全局和当前文件的信息
-            merged_info = self._global_enum_info.copy()
-            merged_info.update(self._current_enum_info)
+            merged_info = self._global_enum_types.copy()
+            merged_info.extend(self._current_enum_types.copy())
             return merged_info
-    
+
+    def get_enum_values(self, enum_name: str = None) -> Dict[str, Any]:
+        """获取枚举信息"""
+        if enum_name:
+            # 优先查找当前文件
+            if enum_name in self._current_enum_types:
+                return {enum_name: self._current_enum_types[enum_name]['values']}
+            # 然后查找全局定义
+            if enum_name in self._global_enum_types:
+                return {enum_name, self._global_enum_types[enum_name]['values']}
+            return {}
+        else:
+            # 合并全局和当前文件的信息
+            merged_values = {}
+            merged_info = self._global_enum_types.copy()
+            merged_info.extend(self._current_enum_types.copy())
+            for info in merged_info:
+                merged_values[info['name']] = info['values']
+            return merged_values
+         
     def get_macro_definition(self, macro_name: str = None) -> str:
         """获取宏定义"""
         if macro_name:
@@ -662,11 +593,8 @@ class TypeManager:
         return {
             'typedef_types': self._global_typedef_types,
             'struct_types': list(self._global_struct_types),
-            'struct_info': self._global_struct_info,   
             'union_types': list(self._global_union_types),
-            'union_info': self._global_union_info,
             'enum_types': list(self._global_enum_types),
-            'enum_info': self._global_enum_info,
             'pointer_types': list(self._global_pointer_types),
             'macro_definitions': self._global_macro_definitions,
             'type_info': self.type_info,  # 添加新的类型信息
@@ -683,12 +611,9 @@ class TypeManager:
         """
         return {
             'typedef_types': self._current_typedef_types,
-            'struct_types': list(self._current_struct_types),
-            'struct_info': self._current_struct_info,   
-            'union_types': list(self._current_union_types),
-            'union_info': self._current_union_info,
-            'enum_types': list(self._current_enum_types),
-            'enum_info': self._current_enum_info,
+            'struct_types': self._current_struct_types,
+            'union_types': self._current_union_types,
+            'enum_types': self._current_enum_types,
             'pointer_types': list(self._current_pointer_types),
             'macro_definitions': self._current_macro_definitions
         }
@@ -696,12 +621,9 @@ class TypeManager:
     def reset_current_type_info(self) -> None:
         """重置当前文件的类型信息"""
         self._current_typedef_types = {}
-        self._current_struct_types = set()
-        self._current_struct_info = {}
-        self._current_union_types = set()
-        self._current_union_info = {}
-        self._current_enum_types = set()
-        self._current_enum_info = {}
+        self._current_struct_types = []
+        self._current_union_types = []
+        self._current_enum_types = []
         self._current_pointer_types = set()
         self._current_macro_definitions = {}
 
@@ -726,22 +648,16 @@ class TypeManager:
             # 选择目标存储
             typedef_types = self._global_typedef_types if to_global else self._current_typedef_types
             struct_types = self._global_struct_types if to_global else self._current_struct_types
-            struct_info = self._global_struct_info if to_global else self._current_struct_info
             union_types = self._global_union_types if to_global else self._current_union_types
-            union_info = self._global_union_info if to_global else self._current_union_info
             enum_types = self._global_enum_types if to_global else self._current_enum_types
-            enum_info = self._global_enum_info if to_global else self._current_enum_info
             pointer_types = self._global_pointer_types if to_global else self._current_pointer_types
             macro_definitions = self._global_macro_definitions if to_global else self._current_macro_definitions
 
             # 合并基本类型信息
             typedef_types.update(other_type_info.get('typedef_types', {}))
-            struct_types.update(other_type_info.get('struct_types', set()))
-            struct_info.update(other_type_info.get('struct_info', {}))
-            union_types.update(other_type_info.get('union_types', set()))
-            union_info.update(other_type_info.get('union_info', {}))
-            enum_types.update(other_type_info.get('enum_types', set()))
-            enum_info.update(other_type_info.get('enum_info', {}))
+            struct_types += other_type_info.get('struct_info', [])
+            union_types += other_type_info.get('union_info', [])
+            enum_types += other_type_info.get('enum_info', [])
             
             # 处理指针类型
             pointer_types_data = other_type_info.get('pointer_types', set())
@@ -1019,25 +935,6 @@ class TypeManager:
         
         return None
 
-    def get_enum_values(self, enum_name: str) -> Dict[str, Any]:
-        """获取枚举类型的所有值
-        
-        Args:
-            enum_name: 枚举类型名称
-            
-        Returns:
-            包含所有枚举值的字典
-        """
-        # 优先查找当前文件
-        if enum_name in self._current_enum_info:
-            return self._current_enum_info[enum_name].get('values', {})
-        
-        # 然后查找全局定义
-        if enum_name in self._global_enum_info:
-            return self._global_enum_info[enum_name].get('values', {})
-        
-        return {}
-
     def has_macro(self, name: str) -> bool:
         """检查宏是否存在
         
@@ -1058,22 +955,19 @@ class TypeManager:
             info: 类型信息字典
         """
         # 直接存储完整的类型信息
-        self.type_info[name] = info.copy()
+        # self.type_info[name] = info.copy()
         
         # 根据类型分类存储
         kind = info.get('kind', '')
         if kind == 'struct':
-            self._current_struct_types.add(name)
-            self._current_struct_info[name] = info.copy()
+            self._current_struct_types.append(info.copy())
         elif kind == 'union':
-            self._current_union_types.add(name)
-            self._current_union_info[name] = info.copy()
+            self._current_union_types.append(info.copy())
         elif kind == 'enum':
-            self._current_enum_types.add(name)
-            self._current_enum_info[name] = info.copy()
+            self._current_enum_types.append(info.copy())
         elif kind == 'typedef':
             self._current_typedef_types[name] = info.copy()
-            if info.get('base_type', '').endswith('*'):
+            if info.get('type', '').endswith('*'):
                 self._current_pointer_types.add(name)
 
     def get_type_size(self, type_name: str) -> int:

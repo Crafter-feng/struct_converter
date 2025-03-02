@@ -1,57 +1,496 @@
 {
     "typedef_types": {
-        "u8": "uint8_t",
-        "u16": "uint16_t",
-        "u32": "uint32_t",
-        "i8": "int8_t",
-        "i16": "int16_t",
-        "i32": "int32_t",
-        "f32": "float",
-        "f64": "double",
-        "PointPtr": "PointPtr",
-        "VectorPtr": "VectorPtr",
-        "Vector": "Vector",
-        "Node": "Node",
-        "ComplexData": "ComplexData",
-        "BitFields": "BitFields",
-        "DataValue": "DataValue",
-        "NestedStruct": "NestedStruct",
-        "RingBuffer": "RingBuffer",
-        "StringView": "StringView",
-        "StringBuilder": "StringBuilder",
-        "Config": "Config",
-        "LogLevel": "enum LogLevel",
-        "Direction": "enum Direction",
-        "ErrorCode": "enum ErrorCode",
-        "Status": "enum Status"
-    },
-    "struct_types": {
-        "ComplexData": {
-            "name": "struct ComplexData",
-            "fields": []
+        "u8": {
+            "kind": "typedef",
+            "name": "u8",
+            "type": "uint8_t",
+            "base_type": "uint8_t",
+            "real_type": "base",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
         },
-        "struct Vector": {
+        "u16": {
+            "kind": "typedef",
+            "name": "u16",
+            "type": "uint16_t",
+            "base_type": "uint16_t",
+            "real_type": "base",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "u32": {
+            "kind": "typedef",
+            "name": "u32",
+            "type": "uint32_t",
+            "base_type": "uint32_t",
+            "real_type": "base",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "i8": {
+            "kind": "typedef",
+            "name": "i8",
+            "type": "int8_t",
+            "base_type": "int8_t",
+            "real_type": "base",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "i16": {
+            "kind": "typedef",
+            "name": "i16",
+            "type": "int16_t",
+            "base_type": "int16_t",
+            "real_type": "base",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "i32": {
+            "kind": "typedef",
+            "name": "i32",
+            "type": "int32_t",
+            "base_type": "int32_t",
+            "real_type": "base",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "f32": {
+            "kind": "typedef",
+            "name": "f32",
+            "type": "float",
+            "base_type": "float",
+            "real_type": "base",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "f64": {
+            "kind": "typedef",
+            "name": "f64",
+            "type": "double",
+            "base_type": "double",
+            "real_type": "base",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "Point1": {
+            "kind": "typedef",
+            "name": "Point1",
+            "type": "struct Point1",
+            "base_type": "struct Point1",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "Point1Ptr": {
+            "kind": "typedef",
+            "name": "Point1Ptr",
+            "type": "struct Point1*",
+            "base_type": "struct Point1",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "Point": {
+            "kind": "typedef",
+            "name": "Point",
+            "type": "struct Point",
+            "base_type": "struct Point",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "PointPtr": {
+            "kind": "typedef",
+            "name": "PointPtr",
+            "type": "struct Point*",
+            "base_type": "struct Point",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "VectorPtr": {
+            "kind": "typedef",
+            "name": "VectorPtr",
+            "type": "struct Vector*",
+            "base_type": "struct Vector",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "Vector": {
+            "kind": "typedef",
+            "name": "Vector",
+            "type": "__anon_struct_33_8_259547",
+            "base_type": "__anon_struct_33_8_259547",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "Node": {
+            "kind": "typedef",
+            "name": "Node",
+            "type": "struct Node",
+            "base_type": "struct Node",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "ComplexData": {
+            "kind": "typedef",
+            "name": "ComplexData",
+            "type": "struct ComplexData",
+            "base_type": "struct ComplexData",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "BitFields": {
+            "kind": "typedef",
+            "name": "BitFields",
+            "type": "struct BitFields",
+            "base_type": "struct BitFields",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "DataValue": {
+            "kind": "typedef",
+            "name": "DataValue",
+            "type": "union DataValue",
+            "base_type": "union DataValue",
+            "real_type": "union",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "NestedStruct": {
+            "kind": "typedef",
+            "name": "NestedStruct",
+            "type": "struct NestedStruct",
+            "base_type": "struct NestedStruct",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "RingBuffer": {
+            "kind": "typedef",
+            "name": "RingBuffer",
+            "type": "struct RingBuffer",
+            "base_type": "struct RingBuffer",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "StringView": {
+            "kind": "typedef",
+            "name": "StringView",
+            "type": "struct StringView",
+            "base_type": "struct StringView",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "StringBuilder": {
+            "kind": "typedef",
+            "name": "StringBuilder",
+            "type": "struct StringBuilder",
+            "base_type": "struct StringBuilder",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "Config": {
+            "kind": "typedef",
+            "name": "Config",
+            "type": "struct Config",
+            "base_type": "struct Config",
+            "real_type": "struct",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "LogLevel": {
+            "kind": "typedef",
+            "name": "LogLevel",
+            "type": "enum LogLevel",
+            "base_type": "enum LogLevel",
+            "real_type": "enum",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "Direction": {
+            "kind": "typedef",
+            "name": "Direction",
+            "type": "enum Direction",
+            "base_type": "enum Direction",
+            "real_type": "enum",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "ErrorCode": {
+            "kind": "typedef",
+            "name": "ErrorCode",
+            "type": "enum ErrorCode",
+            "base_type": "enum ErrorCode",
+            "real_type": "enum",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        },
+        "Status": {
+            "kind": "typedef",
+            "name": "Status",
+            "type": "enum Status",
+            "base_type": "enum Status",
+            "real_type": "enum",
+            "function_info": null,
+            "qualifiers": {
+                "is_const": false,
+                "is_volatile": false,
+                "is_restrict": false,
+                "storage_class": null
+            }
+        }
+    },
+    "struct_types": [
+        {
+            "kind": "struct",
+            "name": "struct Point1",
+            "fields": [
+                {
+                    "name": "x",
+                    "type": "i32",
+                    "array_size": null,
+                    "original_type": "i32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "y",
+                    "type": "i32",
+                    "array_size": null,
+                    "original_type": "i32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 19,
+                "column": 8
+            },
+            "attributes": {},
+            "comment": null
+        },
+        {
+            "kind": "struct",
+            "name": "struct Point",
+            "fields": [
+                {
+                    "name": "x",
+                    "type": "i32",
+                    "array_size": null,
+                    "original_type": "i32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "y",
+                    "type": "i32",
+                    "array_size": null,
+                    "original_type": "i32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 25,
+                "column": 8
+            },
+            "attributes": {},
+            "comment": null
+        },
+        {
             "kind": "struct",
             "name": "struct Vector",
             "fields": [],
-            "size": 0,
+            "size": 1,
             "alignment": 1,
-            "attributes": {},
             "location": {
-                "file": "unknown",
-                "line": 0
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 31,
+                "column": 8
             },
+            "attributes": {},
             "comment": null
         },
-        "struct Point": {
+        {
             "kind": "struct",
-            "name": "struct Point",
+            "name": "__anon_struct_33_8_259547",
             "fields": [
                 {
-                    "name": "x",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
+                    "name": "components",
+                    "type": "f32",
+                    "array_size": [
+                        3
+                    ],
+                    "original_type": "f32",
                     "pointer_type": null,
                     "bit_field": null,
                     "nested_fields": null,
@@ -59,14 +498,15 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 0
+                    }
                 },
                 {
-                    "name": "y",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
+                    "name": "points",
+                    "type": "Point",
+                    "array_size": [
+                        4
+                    ],
+                    "original_type": "Point",
                     "pointer_type": null,
                     "bit_field": null,
                     "nested_fields": null,
@@ -74,655 +514,62 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 4
+                    }
+                },
+                {
+                    "name": "count",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
                 }
             ],
-            "size": 8,
-            "alignment": 4,
-            "attributes": {},
+            "size": 1,
+            "alignment": 1,
             "location": {
-                "file": "unknown",
-                "line": 0
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 34,
+                "column": 8
             },
+            "attributes": {},
             "comment": null
         },
-        "Vector": {
-            "name": "struct Vector",
-            "fields": []
-        },
-        "Point": {
-            "name": "struct Point",
-            "fields": [
-                {
-                    "name": "x",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "y",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 4
-                }
-            ]
-        },
-        "StringBuilder": {
-            "name": "struct StringBuilder",
-            "fields": [
-                {
-                    "name": "buffer",
-                    "type": "char*",
-                    "array_size": null,
-                    "original_type": "char",
-                    "pointer_type": "char",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "capacity",
-                    "type": "size_t",
-                    "array_size": null,
-                    "original_type": "size_t",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                },
-                {
-                    "name": "length",
-                    "type": "size_t",
-                    "array_size": null,
-                    "original_type": "size_t",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 16
-                }
-            ]
-        },
-        "Config": {
-            "name": "struct Config",
-            "fields": []
-        },
-        "NestedStruct": {
-            "name": "struct NestedStruct",
-            "fields": []
-        },
-        "struct Node": {
+        {
             "kind": "struct",
             "name": "struct Node",
-            "fields": [
-                {
-                    "name": "value",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "next",
-                    "type": "struct Node*",
-                    "array_size": null,
-                    "original_type": "struct Node",
-                    "pointer_type": "struct Node",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                },
-                {
-                    "name": "prev",
-                    "type": "struct Node*",
-                    "array_size": null,
-                    "original_type": "struct Node",
-                    "pointer_type": "struct Node",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 16
-                }
-            ],
-            "size": 24,
-            "alignment": 8,
-            "attributes": {},
-            "location": {
-                "file": "unknown",
-                "line": 0
-            },
-            "comment": null
-        },
-        "struct StringBuilder": {
-            "kind": "struct",
-            "name": "struct StringBuilder",
-            "fields": [
-                {
-                    "name": "buffer",
-                    "type": "char*",
-                    "array_size": null,
-                    "original_type": "char",
-                    "pointer_type": "char",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "capacity",
-                    "type": "size_t",
-                    "array_size": null,
-                    "original_type": "size_t",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                },
-                {
-                    "name": "length",
-                    "type": "size_t",
-                    "array_size": null,
-                    "original_type": "size_t",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 16
-                }
-            ],
-            "size": 24,
-            "alignment": 8,
-            "attributes": {},
-            "location": {
-                "file": "unknown",
-                "line": 0
-            },
-            "comment": null
-        },
-        "RingBuffer": {
-            "name": "struct RingBuffer",
-            "fields": []
-        },
-        "Node": {
-            "name": "struct Node",
-            "fields": [
-                {
-                    "name": "value",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "next",
-                    "type": "struct Node*",
-                    "array_size": null,
-                    "original_type": "struct Node",
-                    "pointer_type": "struct Node",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                },
-                {
-                    "name": "prev",
-                    "type": "struct Node*",
-                    "array_size": null,
-                    "original_type": "struct Node",
-                    "pointer_type": "struct Node",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 16
-                }
-            ]
-        },
-        "struct BitFields": {
-            "kind": "struct",
-            "name": "struct BitFields",
-            "fields": [
-                {
-                    "name": "flag1",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 1,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "flag2",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 1,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 4
-                },
-                {
-                    "name": "value",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 6,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                },
-                {
-                    "name": "reserved",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 24,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 12
-                }
-            ],
-            "size": 16,
-            "alignment": 4,
-            "attributes": {},
-            "location": {
-                "file": "unknown",
-                "line": 0
-            },
-            "comment": null
-        },
-        "StringView": {
-            "name": "struct StringView",
-            "fields": [
-                {
-                    "name": "data",
-                    "type": "char*",
-                    "array_size": null,
-                    "original_type": "char",
-                    "pointer_type": "char",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": true,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "length",
-                    "type": "size_t",
-                    "array_size": null,
-                    "original_type": "size_t",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                }
-            ]
-        },
-        "BitFields": {
-            "name": "struct BitFields",
-            "fields": [
-                {
-                    "name": "flag1",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 1,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "flag2",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 1,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 4
-                },
-                {
-                    "name": "value",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 6,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                },
-                {
-                    "name": "reserved",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 24,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 12
-                }
-            ]
-        },
-        "struct StringView": {
-            "kind": "struct",
-            "name": "struct StringView",
-            "fields": [
-                {
-                    "name": "data",
-                    "type": "char*",
-                    "array_size": null,
-                    "original_type": "char",
-                    "pointer_type": "char",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": true,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "length",
-                    "type": "size_t",
-                    "array_size": null,
-                    "original_type": "size_t",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                }
-            ],
-            "size": 16,
-            "alignment": 8,
-            "attributes": {},
-            "location": {
-                "file": "unknown",
-                "line": 0
-            },
-            "comment": null
-        }
-    },
-    "struct_info": {
-        "struct Point": {
-            "kind": "struct",
-            "name": "struct Point",
-            "fields": [
-                {
-                    "name": "x",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "y",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 4
-                }
-            ],
-            "size": 8,
-            "alignment": 4,
-            "attributes": {},
-            "location": {
-                "file": "unknown",
-                "line": 0
-            },
-            "comment": null
-        },
-        "Point": {
-            "name": "struct Point",
-            "fields": [
-                {
-                    "name": "x",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "y",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 4
-                }
-            ]
-        },
-        "struct Vector": {
-            "kind": "struct",
-            "name": "struct Vector",
             "fields": [],
-            "size": 0,
+            "size": 1,
             "alignment": 1,
-            "attributes": {},
             "location": {
-                "file": "unknown",
-                "line": 0
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 43,
+                "column": 4
             },
+            "attributes": {},
             "comment": null
         },
-        "Vector": {
-            "name": "struct Vector",
-            "fields": []
-        },
-        "Node": {
+        {
+            "kind": "struct",
             "name": "struct Node",
-            "fields": [
-                {
-                    "name": "value",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "next",
-                    "type": "struct Node*",
-                    "array_size": null,
-                    "original_type": "struct Node",
-                    "pointer_type": "struct Node",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                },
-                {
-                    "name": "prev",
-                    "type": "struct Node*",
-                    "array_size": null,
-                    "original_type": "struct Node",
-                    "pointer_type": "struct Node",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 16
-                }
-            ]
+            "fields": [],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 44,
+                "column": 4
+            },
+            "attributes": {},
+            "comment": null
         },
-        "struct Node": {
+        {
             "kind": "struct",
             "name": "struct Node",
             "fields": [
@@ -738,119 +585,196 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 0
+                    }
                 },
                 {
                     "name": "next",
                     "type": "struct Node*",
                     "array_size": null,
-                    "original_type": "struct Node",
+                    "original_type": null,
                     "pointer_type": "struct Node",
                     "bit_field": null,
-                    "nested_fields": null,
+                    "nested_fields": [],
                     "qualifiers": {
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
                     },
-                    "offset": 8
+                    "nested_type": "struct Node"
                 },
                 {
                     "name": "prev",
                     "type": "struct Node*",
                     "array_size": null,
-                    "original_type": "struct Node",
+                    "original_type": null,
                     "pointer_type": "struct Node",
                     "bit_field": null,
-                    "nested_fields": null,
+                    "nested_fields": [],
                     "qualifiers": {
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
                     },
-                    "offset": 16
+                    "nested_type": "struct Node"
                 }
             ],
-            "size": 24,
-            "alignment": 8,
-            "attributes": {},
+            "size": 1,
+            "alignment": 1,
             "location": {
-                "file": "unknown",
-                "line": 0
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 41,
+                "column": 8
             },
+            "attributes": {},
             "comment": null
         },
-        "ComplexData": {
+        {
+            "kind": "struct",
             "name": "struct ComplexData",
-            "fields": []
-        },
-        "BitFields": {
-            "name": "struct BitFields",
             "fields": [
                 {
-                    "name": "flag1",
-                    "type": "u32",
+                    "name": "id",
+                    "type": "u8",
                     "array_size": null,
-                    "original_type": "u32",
+                    "original_type": "u8",
                     "pointer_type": null,
-                    "bit_field": 1,
+                    "bit_field": null,
                     "nested_fields": null,
                     "qualifiers": {
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 0
+                    }
                 },
                 {
-                    "name": "flag2",
-                    "type": "u32",
-                    "array_size": null,
-                    "original_type": "u32",
+                    "name": "name",
+                    "type": "char",
+                    "array_size": [
+                        32
+                    ],
+                    "original_type": "char",
                     "pointer_type": null,
-                    "bit_field": 1,
+                    "bit_field": null,
                     "nested_fields": null,
                     "qualifiers": {
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 4
+                    }
                 },
                 {
-                    "name": "value",
-                    "type": "u32",
+                    "name": "position",
+                    "type": "Point",
                     "array_size": null,
-                    "original_type": "u32",
+                    "original_type": "Point",
                     "pointer_type": null,
-                    "bit_field": 6,
+                    "bit_field": null,
                     "nested_fields": null,
                     "qualifiers": {
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 8
+                    }
                 },
                 {
-                    "name": "reserved",
-                    "type": "u32",
+                    "name": "movement",
+                    "type": "Vector*",
                     "array_size": null,
-                    "original_type": "u32",
-                    "pointer_type": null,
-                    "bit_field": 24,
+                    "original_type": "Vector",
+                    "pointer_type": "Vector",
+                    "bit_field": null,
                     "nested_fields": null,
                     "qualifiers": {
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 12
+                    }
+                },
+                {
+                    "name": "targets",
+                    "type": "PointPtr",
+                    "array_size": null,
+                    "original_type": "PointPtr",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "head",
+                    "type": "Node*",
+                    "array_size": null,
+                    "original_type": "Node",
+                    "pointer_type": "Node",
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "matrix",
+                    "type": "f32",
+                    "array_size": [
+                        4,
+                        4
+                    ],
+                    "original_type": "f32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "extra_data",
+                    "type": "void*",
+                    "array_size": null,
+                    "original_type": "void",
+                    "pointer_type": "void",
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "flags",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
                 }
-            ]
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 48,
+                "column": 8
+            },
+            "attributes": {},
+            "comment": null
         },
-        "struct BitFields": {
+        {
             "kind": "struct",
             "name": "struct BitFields",
             "fields": [
@@ -866,8 +790,7 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 0
+                    }
                 },
                 {
                     "name": "flag2",
@@ -881,8 +804,7 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 4
+                    }
                 },
                 {
                     "name": "value",
@@ -896,8 +818,7 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 8
+                    }
                 },
                 {
                     "name": "reserved",
@@ -911,50 +832,290 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 12
+                    }
                 }
             ],
-            "size": 16,
-            "alignment": 4,
-            "attributes": {},
+            "size": 1,
+            "alignment": 1,
             "location": {
-                "file": "unknown",
-                "line": 0
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 61,
+                "column": 8
             },
+            "attributes": {},
             "comment": null
         },
-        "NestedStruct": {
+        {
+            "kind": "struct",
+            "name": "__anon_struct_80_4_f2eb09",
+            "fields": [
+                {
+                    "name": "year",
+                    "type": "u16",
+                    "array_size": null,
+                    "original_type": "u16",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "month",
+                    "type": "u8",
+                    "array_size": null,
+                    "original_type": "u8",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "day",
+                    "type": "u8",
+                    "array_size": null,
+                    "original_type": "u8",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 81,
+                "column": 4
+            },
+            "attributes": {},
+            "comment": null
+        },
+        {
+            "kind": "struct",
             "name": "struct NestedStruct",
-            "fields": []
+            "fields": [
+                {
+                    "name": "origin",
+                    "type": "Point",
+                    "array_size": null,
+                    "original_type": "Point",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "vectors",
+                    "type": "Vector",
+                    "array_size": [
+                        2,
+                        4
+                    ],
+                    "original_type": "Vector",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "values",
+                    "type": "DataValue",
+                    "array_size": [
+                        4
+                    ],
+                    "original_type": "DataValue",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "flags",
+                    "type": "BitFields",
+                    "array_size": null,
+                    "original_type": "BitFields",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "date",
+                    "type": "__anon_struct_80_4_f2eb09",
+                    "array_size": null,
+                    "original_type": null,
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": [
+                        {
+                            "name": "year",
+                            "type": "u16",
+                            "array_size": null,
+                            "original_type": "u16",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "month",
+                            "type": "u8",
+                            "array_size": null,
+                            "original_type": "u8",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "day",
+                            "type": "u8",
+                            "array_size": null,
+                            "original_type": "u8",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        }
+                    ],
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    },
+                    "nested_type": "__anon_struct_80_4_f2eb09"
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 76,
+                "column": 8
+            },
+            "attributes": {},
+            "comment": null
         },
-        "RingBuffer": {
+        {
+            "kind": "struct",
+            "name": "__anon_struct_93_4_e6c1db",
+            "fields": [
+                {
+                    "name": "is_full",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": 1,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "is_empty",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": 1,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "reserved",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": 30,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 94,
+                "column": 4
+            },
+            "attributes": {},
+            "comment": null
+        },
+        {
+            "kind": "struct",
             "name": "struct RingBuffer",
-            "fields": []
-        },
-        "StringView": {
-            "name": "struct StringView",
             "fields": [
                 {
-                    "name": "data",
-                    "type": "char*",
+                    "name": "buffer",
+                    "type": "u8*",
                     "array_size": null,
-                    "original_type": "char",
-                    "pointer_type": "char",
+                    "original_type": "u8",
+                    "pointer_type": "u8",
                     "bit_field": null,
                     "nested_fields": null,
                     "qualifiers": {
-                        "is_const": true,
+                        "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 0
+                    }
                 },
                 {
-                    "name": "length",
-                    "type": "size_t",
+                    "name": "size",
+                    "type": "u32",
                     "array_size": null,
-                    "original_type": "size_t",
+                    "original_type": "u32",
                     "pointer_type": null,
                     "bit_field": null,
                     "nested_fields": null,
@@ -962,12 +1123,106 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
+                    }
+                },
+                {
+                    "name": "read_pos",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "write_pos",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "status",
+                    "type": "__anon_struct_93_4_e6c1db",
+                    "array_size": null,
+                    "original_type": null,
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": [
+                        {
+                            "name": "is_full",
+                            "type": "u32",
+                            "array_size": null,
+                            "original_type": "u32",
+                            "pointer_type": null,
+                            "bit_field": 1,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "is_empty",
+                            "type": "u32",
+                            "array_size": null,
+                            "original_type": "u32",
+                            "pointer_type": null,
+                            "bit_field": 1,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "reserved",
+                            "type": "u32",
+                            "array_size": null,
+                            "original_type": "u32",
+                            "pointer_type": null,
+                            "bit_field": 30,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        }
+                    ],
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
                     },
-                    "offset": 8
+                    "nested_type": "__anon_struct_93_4_e6c1db"
                 }
-            ]
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 89,
+                "column": 8
+            },
+            "attributes": {},
+            "comment": null
         },
-        "struct StringView": {
+        {
             "kind": "struct",
             "name": "struct StringView",
             "fields": [
@@ -983,8 +1238,7 @@
                         "is_const": true,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 0
+                    }
                 },
                 {
                     "name": "length",
@@ -998,70 +1252,20 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 8
+                    }
                 }
             ],
-            "size": 16,
-            "alignment": 8,
-            "attributes": {},
+            "size": 1,
+            "alignment": 1,
             "location": {
-                "file": "unknown",
-                "line": 0
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 102,
+                "column": 8
             },
+            "attributes": {},
             "comment": null
         },
-        "StringBuilder": {
-            "name": "struct StringBuilder",
-            "fields": [
-                {
-                    "name": "buffer",
-                    "type": "char*",
-                    "array_size": null,
-                    "original_type": "char",
-                    "pointer_type": "char",
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 0
-                },
-                {
-                    "name": "capacity",
-                    "type": "size_t",
-                    "array_size": null,
-                    "original_type": "size_t",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 8
-                },
-                {
-                    "name": "length",
-                    "type": "size_t",
-                    "array_size": null,
-                    "original_type": "size_t",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    },
-                    "offset": 16
-                }
-            ]
-        },
-        "struct StringBuilder": {
+        {
             "kind": "struct",
             "name": "struct StringBuilder",
             "fields": [
@@ -1077,8 +1281,7 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 0
+                    }
                 },
                 {
                     "name": "capacity",
@@ -1092,8 +1295,7 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 8
+                    }
                 },
                 {
                     "name": "length",
@@ -1107,26 +1309,405 @@
                         "is_const": false,
                         "is_volatile": false,
                         "is_restrict": false
-                    },
-                    "offset": 16
+                    }
                 }
             ],
-            "size": 24,
-            "alignment": 8,
-            "attributes": {},
+            "size": 1,
+            "alignment": 1,
             "location": {
-                "file": "unknown",
-                "line": 0
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 107,
+                "column": 8
             },
+            "attributes": {},
             "comment": null
         },
-        "Config": {
+        {
+            "kind": "struct",
+            "name": "__anon_struct_114_4_1307b6",
+            "fields": [
+                {
+                    "name": "max_items",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "max_depth",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "threshold",
+                    "type": "f32",
+                    "array_size": null,
+                    "original_type": "f32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 115,
+                "column": 4
+            },
+            "attributes": {},
+            "comment": null
+        },
+        {
+            "kind": "struct",
+            "name": "__anon_struct_120_4_df7072",
+            "fields": [
+                {
+                    "name": "host",
+                    "type": "char",
+                    "array_size": [
+                        64
+                    ],
+                    "original_type": "char",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "port",
+                    "type": "u16",
+                    "array_size": null,
+                    "original_type": "u16",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "timeout_ms",
+                    "type": "u32",
+                    "array_size": null,
+                    "original_type": "u32",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 121,
+                "column": 4
+            },
+            "attributes": {},
+            "comment": null
+        },
+        {
+            "kind": "struct",
+            "name": "__anon_struct_126_4_093118",
+            "fields": [
+                {
+                    "name": "level",
+                    "type": "u8",
+                    "array_size": null,
+                    "original_type": "u8",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "enabled",
+                    "type": "bool",
+                    "array_size": null,
+                    "original_type": "bool",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                },
+                {
+                    "name": "file",
+                    "type": "char",
+                    "array_size": [
+                        256
+                    ],
+                    "original_type": "char",
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 127,
+                "column": 4
+            },
+            "attributes": {},
+            "comment": null
+        },
+        {
+            "kind": "struct",
             "name": "struct Config",
-            "fields": []
+            "fields": [
+                {
+                    "name": "limits",
+                    "type": "__anon_struct_114_4_1307b6",
+                    "array_size": null,
+                    "original_type": null,
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": [
+                        {
+                            "name": "max_items",
+                            "type": "u32",
+                            "array_size": null,
+                            "original_type": "u32",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "max_depth",
+                            "type": "u32",
+                            "array_size": null,
+                            "original_type": "u32",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "threshold",
+                            "type": "f32",
+                            "array_size": null,
+                            "original_type": "f32",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        }
+                    ],
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    },
+                    "nested_type": "__anon_struct_114_4_1307b6"
+                },
+                {
+                    "name": "network",
+                    "type": "__anon_struct_120_4_df7072",
+                    "array_size": null,
+                    "original_type": null,
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": [
+                        {
+                            "name": "host",
+                            "type": "char",
+                            "array_size": [
+                                64
+                            ],
+                            "original_type": "char",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "port",
+                            "type": "u16",
+                            "array_size": null,
+                            "original_type": "u16",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "timeout_ms",
+                            "type": "u32",
+                            "array_size": null,
+                            "original_type": "u32",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        }
+                    ],
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    },
+                    "nested_type": "__anon_struct_120_4_df7072"
+                },
+                {
+                    "name": "logging",
+                    "type": "__anon_struct_126_4_093118",
+                    "array_size": null,
+                    "original_type": null,
+                    "pointer_type": null,
+                    "bit_field": null,
+                    "nested_fields": [
+                        {
+                            "name": "level",
+                            "type": "u8",
+                            "array_size": null,
+                            "original_type": "u8",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "enabled",
+                            "type": "bool",
+                            "array_size": null,
+                            "original_type": "bool",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        },
+                        {
+                            "name": "file",
+                            "type": "char",
+                            "array_size": [
+                                256
+                            ],
+                            "original_type": "char",
+                            "pointer_type": null,
+                            "bit_field": null,
+                            "nested_fields": null,
+                            "qualifiers": {
+                                "is_const": false,
+                                "is_volatile": false,
+                                "is_restrict": false
+                            }
+                        }
+                    ],
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    },
+                    "nested_type": "__anon_struct_126_4_093118"
+                },
+                {
+                    "name": "user_context",
+                    "type": "void*",
+                    "array_size": null,
+                    "original_type": "void",
+                    "pointer_type": "void",
+                    "bit_field": null,
+                    "nested_fields": null,
+                    "qualifiers": {
+                        "is_const": false,
+                        "is_volatile": false,
+                        "is_restrict": false
+                    }
+                }
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 114,
+                "column": 8
+            },
+            "attributes": {},
+            "comment": null
         }
-    },
-    "union_types": {
-        "union DataValue": {
+    ],
+    "union_types": [
+        {
+            "kind": "union",
             "name": "union DataValue",
             "fields": [
                 {
@@ -1174,85 +1755,38 @@
                         "is_restrict": false
                     }
                 }
-            ]
-        },
-        "DataValue": {
-            "name": "union DataValue",
-            "fields": []
+            ],
+            "size": 1,
+            "alignment": 1,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 69,
+                "column": 8
+            },
+            "attributes": {},
+            "comment": null
         }
-    },
-    "union_info": {
-        "DataValue": {
-            "name": "union DataValue",
-            "fields": []
-        },
-        "union DataValue": {
-            "name": "union DataValue",
-            "fields": [
-                {
-                    "name": "as_int",
-                    "type": "i32",
-                    "array_size": null,
-                    "original_type": "i32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    }
-                },
-                {
-                    "name": "as_float",
-                    "type": "f32",
-                    "array_size": null,
-                    "original_type": "f32",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    }
-                },
-                {
-                    "name": "as_bytes",
-                    "type": "u8",
-                    "array_size": [
-                        2,
-                        2
-                    ],
-                    "original_type": "u8",
-                    "pointer_type": null,
-                    "bit_field": null,
-                    "nested_fields": null,
-                    "qualifiers": {
-                        "is_const": false,
-                        "is_volatile": false,
-                        "is_restrict": false
-                    }
-                }
-            ]
-        }
-    },
-    "enum_types": {
-        "enum ErrorCode": {
+    ],
+    "enum_types": [
+        {
             "kind": "enum",
-            "name": "enum ErrorCode",
+            "name": "enum LogLevel",
             "values": {
-                "ERROR_NONE": 0,
-                "ERROR_INVALID_PARAM": -1,
-                "ERROR_OUT_OF_MEMORY": -2,
-                "ERROR_BUFFER_OVERFLOW": -3,
-                "ERROR_NOT_FOUND": -4,
-                "ERROR_NOT_SUPPORTED": -5
+                "LOG_LEVEL_DEBUG": 0,
+                "LOG_LEVEL_INFO": 1,
+                "LOG_LEVEL_WARN": 2,
+                "LOG_LEVEL_ERROR": 3,
+                "LOG_LEVEL_FATAL": 4
             },
             "size": 4,
-            "alignment": 4
+            "alignment": 4,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 137
+            },
+            "comment": null
         },
-        "enum Direction": {
+        {
             "kind": "enum",
             "name": "enum Direction",
             "values": {
@@ -1264,64 +1798,14 @@
                 "DIR_ALL": 9
             },
             "size": 4,
-            "alignment": 4
-        },
-        "enum LogLevel": {
-            "kind": "enum",
-            "name": "enum LogLevel",
-            "values": {
-                "LOG_LEVEL_DEBUG": 0,
-                "LOG_LEVEL_INFO": 1,
-                "LOG_LEVEL_WARN": 2,
-                "LOG_LEVEL_ERROR": 3,
-                "LOG_LEVEL_FATAL": 4
+            "alignment": 4,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 145
             },
-            "size": 4,
-            "alignment": 4
+            "comment": null
         },
-        "enum Status": {
-            "kind": "enum",
-            "name": "enum Status",
-            "values": {
-                "STATUS_IDLE": 0,
-                "STATUS_RUNNING": 1,
-                "STATUS_PAUSED": 2,
-                "STATUS_STOPPED": 3,
-                "STATUS_ERROR": 4
-            },
-            "size": 4,
-            "alignment": 4
-        }
-    },
-    "enum_info": {
-        "enum LogLevel": {
-            "kind": "enum",
-            "name": "enum LogLevel",
-            "values": {
-                "LOG_LEVEL_DEBUG": 0,
-                "LOG_LEVEL_INFO": 1,
-                "LOG_LEVEL_WARN": 2,
-                "LOG_LEVEL_ERROR": 3,
-                "LOG_LEVEL_FATAL": 4
-            },
-            "size": 4,
-            "alignment": 4
-        },
-        "enum Direction": {
-            "kind": "enum",
-            "name": "enum Direction",
-            "values": {
-                "DIR_NONE": 0,
-                "DIR_UP": 1,
-                "DIR_DOWN": 2,
-                "DIR_LEFT": 4,
-                "DIR_RIGHT": 8,
-                "DIR_ALL": 9
-            },
-            "size": 4,
-            "alignment": 4
-        },
-        "enum ErrorCode": {
+        {
             "kind": "enum",
             "name": "enum ErrorCode",
             "values": {
@@ -1333,9 +1817,14 @@
                 "ERROR_NOT_SUPPORTED": -5
             },
             "size": 4,
-            "alignment": 4
+            "alignment": 4,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 178
+            },
+            "comment": null
         },
-        "enum Status": {
+        {
             "kind": "enum",
             "name": "enum Status",
             "values": {
@@ -1346,36 +1835,20 @@
                 "STATUS_ERROR": 4
             },
             "size": 4,
-            "alignment": 4
+            "alignment": 4,
+            "location": {
+                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "line": 188
+            },
+            "comment": null
         }
-    },
+    ],
     "pointer_types": [
-        "u8*",
         "VectorPtr",
-        "struct Vector*",
-        "PointPtr",
-        "struct StringView*",
-        "char*",
-        "Node*",
-        "struct StringBuilder*",
-        "Vector*",
-        "struct Node*",
-        "struct Point*",
-        "void*",
-        "struct BitFields*"
+        "Point1Ptr",
+        "PointPtr"
     ],
     "macro_definitions": {
-        "LOG_LEVEL_DEBUG": 0,
-        "LOG_LEVEL_INFO": 1,
-        "LOG_LEVEL_WARN": 2,
-        "LOG_LEVEL_ERROR": 3,
-        "LOG_LEVEL_FATAL": 4,
-        "DIR_NONE": 0,
-        "DIR_UP": 1,
-        "DIR_DOWN": 2,
-        "DIR_LEFT": 4,
-        "DIR_RIGHT": 8,
-        "DIR_ALL": 9,
         "MAX_BUFFER_SIZE": 1024,
         "MIN_BUFFER_SIZE": 64,
         "DEFAULT_TIMEOUT": 5000,
@@ -1390,17 +1863,6 @@
         "MINOR_VERSION": 0,
         "PATCH_VERSION": 0,
         "VERSION_STRING": "\"1.0.0\"",
-        "ERROR_NONE": 0,
-        "ERROR_INVALID_PARAM": -1,
-        "ERROR_OUT_OF_MEMORY": -2,
-        "ERROR_BUFFER_OVERFLOW": -3,
-        "ERROR_NOT_FOUND": -4,
-        "ERROR_NOT_SUPPORTED": -5,
-        "STATUS_IDLE": 0,
-        "STATUS_RUNNING": 1,
-        "STATUS_PAUSED": 2,
-        "STATUS_STOPPED": 3,
-        "STATUS_ERROR": 4,
         "PI": 3.14159265359,
         "E": 2.71828182846,
         "GOLDEN_RATIO": 1.61803398875,

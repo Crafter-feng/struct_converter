@@ -161,7 +161,11 @@ class ExpressionParser:
                         return expr
             
             # 计算表达式
-            result = eval(expr)
+            try:
+                result = eval(expr)
+            except ZeroDivisionError:
+                logger.debug("Division by zero detected, returning original expression")
+                return expr
             logger.debug(f"Evaluation result: {result}")
             return result
             

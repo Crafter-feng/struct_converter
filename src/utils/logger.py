@@ -6,4 +6,4 @@ __all__ = ['logger']
 
 
 
-logger.add("logs/debug.log", level="DEBUG")
+logger.add("logs/debug.log", level="DEBUG", mode='w')

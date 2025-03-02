@@ -14,12 +14,19 @@ typedef int32_t i32;
 typedef float f32;
 typedef double f64;
 
+#if 0
+// 简单结构体
+typedef struct Point1 {
+    i32 x;
+    i32 y;
+} Point1, *Point1Ptr;
+#else
 // 简单结构体
 typedef struct Point {
     i32 x;
     i32 y;
 } Point, *PointPtr;
-
+#endif
 // 指针类型定义
 typedef struct Vector* VectorPtr;
 

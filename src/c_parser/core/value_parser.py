@@ -35,7 +35,7 @@ class ValueParser:
             # 使用表达式解析器解析值
             value, _ = ExpressionParser.parse(
                 value,
-                self.type_manager.get_enum_info() if self.type_manager else {},
+                self.type_manager.get_enum_values() if self.type_manager else {},
                 self.type_manager.get_macro_definition() if self.type_manager else {}
             )
             

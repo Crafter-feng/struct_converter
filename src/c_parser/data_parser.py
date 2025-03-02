@@ -381,7 +381,7 @@ class CDataParser:
             logger.debug(f"Evaluating expression: {expr}")
             value, _ = ExpressionParser.parse(
                 expr,
-                self.data_manager.type_manager.get_enum_info(),
+                self.data_manager.type_manager.get_enum_values(),
                 self.data_manager.type_manager.get_macro_definition()
             )
             logger.debug(f"Evaluated value: {value}")
@@ -462,7 +462,7 @@ class CDataParser:
             # 使用ExpressionParser处理其他表达式
             value, _ = ExpressionParser.parse(
                 size_expr,
-                self.data_manager.type_manager.get_enum_info(),
+                self.data_manager.type_manager.get_enum_values(),
                 self.data_manager.type_manager.get_macro_definition()
             )
             return value
