@@ -102,7 +102,7 @@ class CTypeParser:
                 self._parse_tree(tree)
                 self.logger.debug("语法树遍历完成")
             except Exception as e:
-                self.logger.error(f"语法树遍历出错: {e}")
+                self.logger.exception(f"语法树遍历出错: {e}")
                 return None
             
             # 输出解析结果统计

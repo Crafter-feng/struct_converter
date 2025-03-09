@@ -1,6 +1,6 @@
 {
-    "typedef_types": {
-        "u8": {
+    "typedef_types": [
+        {
             "kind": "typedef",
             "name": "u8",
             "type": "uint8_t",
@@ -14,7 +14,7 @@
                 "storage_class": null
             }
         },
-        "u16": {
+        {
             "kind": "typedef",
             "name": "u16",
             "type": "uint16_t",
@@ -28,7 +28,7 @@
                 "storage_class": null
             }
         },
-        "u32": {
+        {
             "kind": "typedef",
             "name": "u32",
             "type": "uint32_t",
@@ -42,7 +42,7 @@
                 "storage_class": null
             }
         },
-        "i8": {
+        {
             "kind": "typedef",
             "name": "i8",
             "type": "int8_t",
@@ -56,7 +56,7 @@
                 "storage_class": null
             }
         },
-        "i16": {
+        {
             "kind": "typedef",
             "name": "i16",
             "type": "int16_t",
@@ -70,7 +70,7 @@
                 "storage_class": null
             }
         },
-        "i32": {
+        {
             "kind": "typedef",
             "name": "i32",
             "type": "int32_t",
@@ -84,7 +84,7 @@
                 "storage_class": null
             }
         },
-        "f32": {
+        {
             "kind": "typedef",
             "name": "f32",
             "type": "float",
@@ -98,7 +98,7 @@
                 "storage_class": null
             }
         },
-        "f64": {
+        {
             "kind": "typedef",
             "name": "f64",
             "type": "double",
@@ -112,7 +112,7 @@
                 "storage_class": null
             }
         },
-        "Point1": {
+        {
             "kind": "typedef",
             "name": "Point1",
             "type": "struct Point1",
@@ -126,7 +126,7 @@
                 "storage_class": null
             }
         },
-        "Point1Ptr": {
+        {
             "kind": "typedef",
             "name": "Point1Ptr",
             "type": "struct Point1*",
@@ -140,7 +140,7 @@
                 "storage_class": null
             }
         },
-        "Point": {
+        {
             "kind": "typedef",
             "name": "Point",
             "type": "struct Point",
@@ -154,7 +154,7 @@
                 "storage_class": null
             }
         },
-        "PointPtr": {
+        {
             "kind": "typedef",
             "name": "PointPtr",
             "type": "struct Point*",
@@ -168,7 +168,7 @@
                 "storage_class": null
             }
         },
-        "VectorPtr": {
+        {
             "kind": "typedef",
             "name": "VectorPtr",
             "type": "struct Vector*",
@@ -182,7 +182,7 @@
                 "storage_class": null
             }
         },
-        "Vector": {
+        {
             "kind": "typedef",
             "name": "Vector",
             "type": "__anon_struct_33_8_259547",
@@ -196,7 +196,7 @@
                 "storage_class": null
             }
         },
-        "Node": {
+        {
             "kind": "typedef",
             "name": "Node",
             "type": "struct Node",
@@ -210,7 +210,7 @@
                 "storage_class": null
             }
         },
-        "ComplexData": {
+        {
             "kind": "typedef",
             "name": "ComplexData",
             "type": "struct ComplexData",
@@ -224,7 +224,7 @@
                 "storage_class": null
             }
         },
-        "BitFields": {
+        {
             "kind": "typedef",
             "name": "BitFields",
             "type": "struct BitFields",
@@ -238,7 +238,7 @@
                 "storage_class": null
             }
         },
-        "DataValue": {
+        {
             "kind": "typedef",
             "name": "DataValue",
             "type": "union DataValue",
@@ -252,7 +252,7 @@
                 "storage_class": null
             }
         },
-        "NestedStruct": {
+        {
             "kind": "typedef",
             "name": "NestedStruct",
             "type": "struct NestedStruct",
@@ -266,7 +266,7 @@
                 "storage_class": null
             }
         },
-        "RingBuffer": {
+        {
             "kind": "typedef",
             "name": "RingBuffer",
             "type": "struct RingBuffer",
@@ -280,7 +280,7 @@
                 "storage_class": null
             }
         },
-        "StringView": {
+        {
             "kind": "typedef",
             "name": "StringView",
             "type": "struct StringView",
@@ -294,7 +294,7 @@
                 "storage_class": null
             }
         },
-        "StringBuilder": {
+        {
             "kind": "typedef",
             "name": "StringBuilder",
             "type": "struct StringBuilder",
@@ -308,7 +308,7 @@
                 "storage_class": null
             }
         },
-        "Config": {
+        {
             "kind": "typedef",
             "name": "Config",
             "type": "struct Config",
@@ -322,7 +322,7 @@
                 "storage_class": null
             }
         },
-        "LogLevel": {
+        {
             "kind": "typedef",
             "name": "LogLevel",
             "type": "enum LogLevel",
@@ -336,7 +336,7 @@
                 "storage_class": null
             }
         },
-        "Direction": {
+        {
             "kind": "typedef",
             "name": "Direction",
             "type": "enum Direction",
@@ -350,7 +350,7 @@
                 "storage_class": null
             }
         },
-        "ErrorCode": {
+        {
             "kind": "typedef",
             "name": "ErrorCode",
             "type": "enum ErrorCode",
@@ -364,7 +364,7 @@
                 "storage_class": null
             }
         },
-        "Status": {
+        {
             "kind": "typedef",
             "name": "Status",
             "type": "enum Status",
@@ -378,7 +378,7 @@
                 "storage_class": null
             }
         }
-    },
+    ],
     "struct_types": [
         {
             "kind": "struct",
@@ -1844,9 +1844,9 @@
         }
     ],
     "pointer_types": [
-        "VectorPtr",
+        "PointPtr",
         "Point1Ptr",
-        "PointPtr"
+        "VectorPtr"
     ],
     "macro_definitions": {
         "MAX_BUFFER_SIZE": 1024,
