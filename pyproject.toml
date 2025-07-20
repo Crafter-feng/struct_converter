@@ -1,3 +1,19 @@
+[project]
+name = "struct-converter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "click>=8.1.8",
+    "jinja2>=3.1.6",
+    "loguru>=0.7.3",
+    "psutil>=7.0.0",
+    "pytest>=8.3.5",
+    "pyyaml>=6.0.2",
+    "tree-sitter>=0.21.3",
+]
+
 [build-system]
 requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -5,7 +21,7 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
-addopts = "-v --cov=src"
+addopts = "-v"
 pythonpath = ["src"]
 
 [tool.coverage.run]

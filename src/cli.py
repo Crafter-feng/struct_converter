@@ -4,8 +4,8 @@ from typing import List, Optional, Dict, Any
 from loguru import logger
 from config import GeneratorConfig
 from config import EncryptionConfig
-from struct_converter.generators import CGenerator
-from struct_converter.generators import PythonGenerator
+from c_converter.generators import CGenerator
+from c_converter.generators import PythonGenerator
 from c_parser import TypeManager,CTypeParser,CDataParser
 from utils.logger import logger 
 import json
@@ -204,7 +204,7 @@ def init_encrypt_config(config_file: str,
             
         config = EncryptionConfig(
             enable=True,
-            salt=salt or "struct_converter",
+            salt=salt or "c_converter",
             encrypt_all=encrypt_all,
             encrypted_fields=encrypted_fields,
             excluded_fields=excluded_fields

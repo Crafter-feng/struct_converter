@@ -3,7 +3,7 @@ import hashlib
 from pathlib import Path
 from typing import Dict, Any, Optional
 from utils.logger_config import get_logger
-from struct_converter.core.exceptions import CacheError
+from c_converter.core.exceptions import CacheError
 
 logger = get_logger("CacheManager")
 

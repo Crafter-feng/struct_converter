@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from jinja2 import Environment, PackageLoader, select_autoescape
-from struct_converter.core.generator import CodeGenerator
-from struct_converter.core.exceptions import CodeGenerationError
+from c_converter.core.generator import CodeGenerator
+from c_converter.core.exceptions import CodeGenerationError
 from utils.logger_config import get_logger
 
 logger = get_logger("CppGenerator")
@@ -11,7 +11,7 @@ class CppGenerator(CodeGenerator):
     
     def __init__(self):
         self.env = Environment(
-            loader=PackageLoader('struct_converter', 'templates/cpp'),
+            loader=PackageLoader('c_converter', 'templates/cpp'),
             autoescape=select_autoescape(['html', 'xml']),
             trim_blocks=True,
             lstrip_blocks=True

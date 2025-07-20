@@ -11,7 +11,7 @@ class EncryptionConfig:
     enable: bool = False
     
     # 加密盐值
-    salt: str = "struct_converter"
+    salt: str = "c_converter"
     
     # 是否加密所有字段
     encrypt_all: bool = False

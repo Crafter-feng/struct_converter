@@ -416,7 +416,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 19,
                 "column": 8
             },
@@ -459,7 +459,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 25,
                 "column": 8
             },
@@ -473,7 +473,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 31,
                 "column": 8
             },
@@ -534,7 +534,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 34,
                 "column": 8
             },
@@ -548,7 +548,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 43,
                 "column": 4
             },
@@ -562,7 +562,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 44,
                 "column": 4
             },
@@ -621,7 +621,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 41,
                 "column": 8
             },
@@ -767,7 +767,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 48,
                 "column": 8
             },
@@ -838,7 +838,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 61,
                 "column": 8
             },
@@ -895,7 +895,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 81,
                 "column": 4
             },
@@ -1029,7 +1029,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 76,
                 "column": 8
             },
@@ -1086,7 +1086,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 94,
                 "column": 4
             },
@@ -1215,7 +1215,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 89,
                 "column": 8
             },
@@ -1258,7 +1258,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 102,
                 "column": 8
             },
@@ -1315,7 +1315,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 107,
                 "column": 8
             },
@@ -1372,7 +1372,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 115,
                 "column": 4
             },
@@ -1431,7 +1431,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 121,
                 "column": 4
             },
@@ -1490,7 +1490,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 127,
                 "column": 4
             },
@@ -1697,7 +1697,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 114,
                 "column": 8
             },
@@ -1759,7 +1759,7 @@
             "size": 1,
             "alignment": 1,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 69,
                 "column": 8
             },
@@ -1781,7 +1781,7 @@
             "size": 4,
             "alignment": 4,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 137
             },
             "comment": null
@@ -1800,7 +1800,7 @@
             "size": 4,
             "alignment": 4,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 145
             },
             "comment": null
@@ -1819,7 +1819,7 @@
             "size": 4,
             "alignment": 4,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 178
             },
             "comment": null
@@ -1837,16 +1837,16 @@
             "size": 4,
             "alignment": 4,
             "location": {
-                "file": "tests\\fixtures\\c_files\\test_structs.h",
+                "file": "tests/fixtures/c_files/test_structs.h",
                 "line": 188
             },
             "comment": null
         }
     ],
     "pointer_types": [
+        "VectorPtr",
         "PointPtr",
-        "Point1Ptr",
-        "VectorPtr"
+        "Point1Ptr"
     ],
     "macro_definitions": {
         "MAX_BUFFER_SIZE": 1024,

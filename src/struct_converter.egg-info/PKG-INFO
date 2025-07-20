@@ -1,0 +1,38 @@
+Metadata-Version: 2.1
+Name: struct-converter
+Version: 0.1.0
+Summary: Add your description here
+Home-page: https://github.com/yourusername/c_converter
+Author: Your Name
+Author-email: your.email@example.com
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.1.8
+Requires-Dist: jinja2>=3.1.6
+Requires-Dist: loguru>=0.7.3
+Requires-Dist: psutil>=7.0.0
+Requires-Dist: pytest>=8.3.5
+Requires-Dist: pyyaml>=6.0.2
+Requires-Dist: tree-sitter>=0.21.3
+
+这是一个基于python的c语言代码解析器以及生成器，用tree-sitter解析c语言代码并生成c语言代码。
+目前支持的语法有：
+- 结构体
+- 枚举
+- 函数
+- 变量
+- 宏定义
+- 常量
+- 注释
+
+目前支持的结构体有：
+- 位域
+- 复杂数据
+- 配置
+- 嵌套结构体
+- 节点
+- 点
+- 环形缓冲区
+- 字符串构建器
+- 字符串视图
+- 向量

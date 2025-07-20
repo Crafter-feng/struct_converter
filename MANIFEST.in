@@ -7,8 +7,8 @@ include pyproject.toml
 recursive-include config *.yaml
 
 # 模板文件
-recursive-include src/struct_converter/templates *.jinja
-recursive-include src/struct_converter/templates *.j2
+recursive-include src/c_converter/templates *.jinja
+recursive-include src/c_converter/templates *.j2
 
 # 测试文件
 recursive-include tests *.py
