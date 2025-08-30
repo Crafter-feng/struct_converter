@@ -90,6 +90,10 @@ class TypeManager:
         self._current_pointer_types = set()
         self._current_macro_definitions = {}
         
+        # 性能优化缓存
+        self._kind_cache = {}
+        self._find_cache = {}
+        
         # 初始化全局类型信息
         if type_info:
             self._load_type_info(type_info)
@@ -132,35 +136,8 @@ class TypeManager:
     def _load_type_info(self, type_info: Dict[str, Any]) -> None:
         """加载类型信息"""
         try:
-            # 直接加载类型列表
-            if 'types' in type_info:
-                self._global_types.extend(type_info['types'])
-            else:
-                # 兼容旧格式，将不同种类的类型合并到统一列表
-                if 'typedef_types' in type_info:
-                    for typedef in type_info['typedef_types']:
-                        if isinstance(typedef, dict):
-                            typedef['kind'] = 'typedef'
-                            self._global_types.append(typedef)
-                
-                if 'struct_types' in type_info:
-                    for struct in type_info['struct_types']:
-                        if isinstance(struct, dict):
-                            struct['kind'] = 'struct'
-                            self._global_types.append(struct)
-                
-                if 'union_types' in type_info:
-                    for union in type_info['union_types']:
-                        if isinstance(union, dict):
-                            union['kind'] = 'union'
-                            self._global_types.append(union)
-                
-                if 'enum_types' in type_info:
-                    for enum in type_info['enum_types']:
-                        if isinstance(enum, dict):
-                            enum['kind'] = 'enum'
-                            self._global_types.append(enum)
-            
+            logger.info(f"Loading type info: {type_info}")
+            self._global_types.extend(type_info.get('types', []))
             # 处理指针类型和宏定义
             self._global_pointer_types.update(type_info.get('pointer_types', set()))
             self._global_macro_definitions.update(type_info.get('macro_definitions', {}))
@@ -168,6 +145,14 @@ class TypeManager:
         except Exception as e:
             logger.error(f"Failed to load type info: {e}")
             raise
+        
+        # 清理缓存，因为类型信息已更新
+        self._clear_cache()
+
+    def _clear_cache(self) -> None:
+        """清理性能缓存"""
+        self._kind_cache.clear()
+        self._find_cache.clear()
 
     def add_macro_definition(self, name: str, value: Any) -> None:
         """添加宏定义
@@ -214,51 +199,6 @@ class TypeManager:
             'macro_definitions': macro_definitions
         }
 
-    def export_type_info(self, scope: str = 'all'):
-        """导出所有类型信息（按类型分类）
-        
-        Args:
-            scope: 导出范围，可选值为 'all'/'global'/'current'
-            
-        Returns:
-            包含分类后类型信息的字典
-        """
-        # 根据参数选择要导出的类型
-        if scope == 'current':
-            export_types = self._current_types
-            pointer_types = list(self._current_pointer_types)
-            macro_definitions = self._current_macro_definitions.copy()
-        elif scope == 'global':
-            export_types = self._global_types
-            pointer_types = list(self._global_pointer_types)
-            macro_definitions = self._global_macro_definitions.copy()
-        elif scope == 'all':
-            # 合并全局和当前文件的类型
-            export_types = self._global_types + self._current_types
-            # 合并指针类型
-            pointer_types = list(self._global_pointer_types.union(self._current_pointer_types))
-            # 合并宏定义
-            macro_definitions = self._global_macro_definitions.copy()
-            macro_definitions.update(self._current_macro_definitions)
-        else:
-            logger.warning(f"Invalid scope '{scope}', using 'all' instead")
-            return self.export_type_info(scope='all')
-        
-        # 按类型分类
-        typedef_types = [t for t in export_types if t.get('kind') == 'typedef']
-        struct_types = [t for t in export_types if t.get('kind') == 'struct']
-        union_types = [t for t in export_types if t.get('kind') == 'union']
-        enum_types = [t for t in export_types if t.get('kind') == 'enum']
-        
-        return {
-            'typedef_types': typedef_types,
-            'struct_types': struct_types,
-            'union_types': union_types,
-            'enum_types': enum_types,
-            'pointer_types': pointer_types,
-            'macro_definitions': macro_definitions
-        }
-    
     def update_type_info(self, type_info: Dict[str, Any], to_global: bool = False):
         """更新类型信息
         
@@ -287,10 +227,24 @@ class TypeManager:
     def get_struct_info(self, struct_name: str = None) -> Dict[str, Any]:
         """获取结构体信息"""
         if struct_name:
-            # 使用JSONPath查询
-            query = f"$[?(@.kind=='struct' && @.name=='{struct_name}')]"
-            results = self.find_types_by_jsonpath(query)
-            return results[0] if results else {}
+            # 尝试多种名称格式进行查找
+            search_names = [
+                struct_name,  # 原始名称
+                self._clean_type_name(struct_name),  # 清理后的名称
+                f"struct {self._clean_type_name(struct_name)}"  # 加上struct前缀
+            ]
+            
+            # 去重
+            search_names = list(dict.fromkeys(search_names))
+            
+            # 先获取所有结构体，然后手动过滤
+            all_structs = self.find_types_by_jsonpath("$[?(@.kind=='struct')]")
+            
+            for struct in all_structs:
+                if struct.get('name') in search_names:
+                    return struct
+            
+            return {}
         else:
             # 返回所有结构体
             return self.find_types_by_jsonpath("$[?(@.kind=='struct')]")
@@ -298,10 +252,24 @@ class TypeManager:
     def get_union_info(self, union_name: str = None) -> Dict[str, Any]:
         """获取联合体信息"""
         if union_name:
-            # 使用JSONPath查询
-            query = f"$[?(@.kind=='union' && @.name=='{union_name}')]"
-            results = self.find_types_by_jsonpath(query)
-            return results[0] if results else {}
+            # 尝试多种名称格式进行查找
+            search_names = [
+                union_name,  # 原始名称
+                self._clean_type_name(union_name),  # 清理后的名称
+                f"union {self._clean_type_name(union_name)}"  # 加上union前缀
+            ]
+            
+            # 去重
+            search_names = list(dict.fromkeys(search_names))
+            
+            # 先获取所有联合体，然后手动过滤
+            all_unions = self.find_types_by_jsonpath("$[?(@.kind=='union')]")
+            
+            for union in all_unions:
+                if union.get('name') in search_names:
+                    return union
+            
+            return {}
         else:
             # 返回所有联合体
             return self.find_types_by_jsonpath("$[?(@.kind=='union')]")
@@ -309,10 +277,24 @@ class TypeManager:
     def get_enum_info(self, enum_name: str = None) -> Dict[str, Any]:
         """获取枚举信息"""
         if enum_name:
-            # 使用JSONPath查询
-            query = f"$[?(@.kind=='enum' && @.name=='{enum_name}')]"
-            results = self.find_types_by_jsonpath(query)
-            return results[0] if results else {}
+            # 尝试多种名称格式进行查找
+            search_names = [
+                enum_name,  # 原始名称
+                self._clean_type_name(enum_name),  # 清理后的名称
+                f"enum {self._clean_type_name(enum_name)}"  # 加上enum前缀
+            ]
+            
+            # 去重
+            search_names = list(dict.fromkeys(search_names))
+            
+            # 先获取所有枚举，然后手动过滤
+            all_enums = self.find_types_by_jsonpath("$[?(@.kind=='enum')]")
+            
+            for enum in all_enums:
+                if enum.get('name') in search_names:
+                    return enum
+            
+            return {}
         else:
             # 合并全局和当前文件的信息
             enums = self.find_types_by_jsonpath("$[?(@.kind=='enum')]")
@@ -324,6 +306,42 @@ class TypeManager:
                         merged_values[name] = enum.get('values', {})
             return merged_values
          
+    def get_type_info(self, type_name: str) -> Dict[str, Any]:
+        """获取类型信息（结构体、联合体、枚举等）
+        
+        Args:
+            type_name: 类型名称
+            
+        Returns:
+            类型信息字典，如果未找到则返回空字典
+        """
+        # 清理类型名称
+        clean_name = self._clean_type_name(type_name)
+        
+        # 尝试查找结构体
+        struct_info = self.get_struct_info(clean_name)
+        if struct_info:
+            return struct_info
+            
+        # 尝试查找联合体
+        union_info = self.get_union_info(clean_name)
+        if union_info:
+            return union_info
+            
+        # 尝试查找枚举
+        enum_info = self.get_enum_info(clean_name)
+        if enum_info:
+            return enum_info
+            
+        # 尝试查找typedef
+        query = f"$[?(@.kind=='typedef' && @.name=='{clean_name}')]"
+        results = self.find_types_by_jsonpath(query)
+        if results:
+            return results[0]
+            
+        # 如果都没找到，返回空字典
+        return {}
+
     def get_macro_definition(self, macro_name: str = None) -> str:
         """获取宏定义"""
         if macro_name:
@@ -338,104 +356,193 @@ class TypeManager:
             merged_info.update(self._current_macro_definitions)
             return merged_info
     
-    def is_basic_type(self, type_name: str) -> bool:
-        """判断是否为基本类型"""
-        # 清理类型名称
-        clean_name = self._clean_type_name(type_name)
+    def _find_type_by_name(self, type_name: str) -> Optional[Dict[str, Any]]:
+        """统一的类型查找方法
         
-        # 先检查是否是基本类型
-        if clean_name in self.BASIC_TYPES:
-            return True
-        
-        # 检查类型别名，并递归检查其实际类型
-        real_type = self.get_real_type(clean_name)
-        if real_type != clean_name:
-            return self.is_basic_type(real_type)
+        Args:
+            type_name: 类型名称
             
-        return False
+        Returns:
+            找到的类型信息，如果没找到返回None
+        """
+        # 检查缓存
+        if type_name in self._find_cache:
+            return self._find_cache[type_name]
         
-    def is_struct_type(self, type_name: str) -> bool:
-        """判断是否为结构体类型"""
-        # 处理 'struct X' 形式
+        clean_name = self._clean_type_name(type_name)
+        result = None
+        
+        # 搜索所有类型定义
+        all_types = self._current_types + self._global_types
+        for type_info in all_types:
+            if type_info.get('name') == clean_name:
+                result = type_info
+                break
+        
+        # 缓存结果
+        self._find_cache[type_name] = result
+        return result
+    
+    def _get_type_kind(self, type_name: str) -> Optional[str]:
+        """获取类型的种类
+        
+        Args:
+            type_name: 类型名称
+            
+        Returns:
+            类型种类，如果未找到返回None
+        """
+        # 检查缓存
+        if hasattr(self, '_kind_cache') and type_name in self._kind_cache:
+            return self._kind_cache[type_name]
+        
+        result = None
+        
+        # 处理带前缀的类型名称
         if type_name.startswith('struct '):
+            result = 'struct'
+        elif type_name.startswith('union '):
+            result = 'union'
+        elif type_name.startswith('enum '):
+            result = 'enum'
+        elif '*' in type_name:
+            result = 'pointer'
+        else:
+            # 只在需要时清理类型名称
+            clean_name = self._clean_type_name(type_name)
+            
+            # 检查基本类型
+            if clean_name in self.BASIC_TYPES:
+                result = 'basic'
+            # 检查指针类型
+            elif clean_name in self._current_pointer_types or clean_name in self._global_pointer_types:
+                result = 'pointer'
+            else:
+                # 查找自定义类型
+                type_info = self._find_type_by_name(type_name)
+                if type_info:
+                    result = type_info.get('kind')
+                else:
+                    # 检查类型别名
+                    if clean_name in self.TYPE_ALIASES:
+                        alias_type = self.TYPE_ALIASES[clean_name]
+                        if isinstance(alias_type, dict):
+                            alias_type = alias_type.get('base_type', '')
+                        result = self._get_type_kind(alias_type)
+        
+        # 缓存结果
+        if not hasattr(self, '_kind_cache'):
+            self._kind_cache = {}
+        self._kind_cache[type_name] = result
+        
+        return result
+    
+    def is_basic_type(self, type_name: str, visited: Set[str] = None) -> bool:
+        """判断是否为基本类型"""
+        if visited is None:
+            visited = set()
+
+        # 防止循环引用
+        if type_name in visited:
+            logger.warning(f"Detected circular reference in is_basic_type: {type_name}")
+            return False
+        visited.add(type_name)
+        
+        return self._get_type_kind(type_name) == 'basic'
+        
+    def is_struct_type(self, type_name: str, visited: Set[str] = None) -> bool:
+        """判断是否为结构体类型"""
+        if visited is None:
+            visited = set()
+
+        # 防止循环引用
+        if type_name in visited:
+            logger.warning(f"Detected circular reference in is_struct_type: {type_name}")
+            return False
+        visited.add(type_name)
+        
+        kind = self._get_type_kind(type_name)
+        if kind == 'struct':
             return True
         
-        # 清理类型名称
-        clean_name = self._clean_type_name(type_name)
-        
-        # 使用新的统一存储方式查找
-        if any(t.get('kind') == 'struct' and t.get('name') == clean_name 
-               for t in self._current_types + self._global_types):
-            return True
-        
-        # 检查类型别名
-        real_type = self.get_real_type(clean_name)
-        # 只在实际类型不同且不是自身引用时继续检查
-        if real_type != clean_name and real_type != type_name:
-            return self.is_struct_type(real_type)
+        # 检查typedef是否指向struct
+        if kind == 'typedef':
+            type_info = self._find_type_by_name(type_name)
+            if type_info:
+                real_type = type_info.get('real_type')
+                return real_type == 'struct' or type_info.get('type', '').startswith('struct ')
         
         return False
         
-    def is_union_type(self, type_name: str) -> bool:
+    def is_union_type(self, type_name: str, visited: Set[str] = None) -> bool:
         """判断是否为联合体类型"""
-        # 处理 'union X' 形式
-        if type_name.startswith('union '):
+        if visited is None:
+            visited = set()
+
+        # 防止循环引用
+        if type_name in visited:
+            logger.warning(f"Detected circular reference in is_union_type: {type_name}")
+            return False
+        visited.add(type_name)
+        
+        kind = self._get_type_kind(type_name)
+        if kind == 'union':
             return True
         
-        # 清理类型名称
-        clean_name = self._clean_type_name(type_name)
-        
-        # 使用新的统一存储方式查找
-        if any(t.get('kind') == 'union' and t.get('name') == clean_name 
-               for t in self._current_types + self._global_types):
-            return True
-        
-        # 检查类型别名
-        real_type = self.get_real_type(clean_name)
-        # 只在实际类型不同且不是自身引用时继续检查
-        if real_type != clean_name and real_type != type_name:
-            return self.is_union_type(real_type)
+        # 检查typedef是否指向union
+        if kind == 'typedef':
+            type_info = self._find_type_by_name(type_name)
+            if type_info:
+                real_type = type_info.get('real_type')
+                return real_type == 'union' or type_info.get('type', '').startswith('union ')
         
         return False
         
-    def is_enum_type(self, type_name: str) -> bool:
+    def is_enum_type(self, type_name: str, visited: Set[str] = None) -> bool:
         """判断是否为枚举类型"""
-        # 处理 'enum X' 形式
-        if type_name.startswith('enum '):
+        if visited is None:
+            visited = set()
+
+        # 防止循环引用
+        if type_name in visited:
+            logger.warning(f"Detected circular reference in is_enum_type: {type_name}")
+            return False
+        visited.add(type_name)
+        
+        kind = self._get_type_kind(type_name)
+        if kind == 'enum':
             return True
         
-        # 清理类型名称
-        clean_name = self._clean_type_name(type_name)
-        
-        # 使用新的统一存储方式查找
-        if any(t.get('kind') == 'enum' and t.get('name') == clean_name 
-               for t in self._current_types + self._global_types):
-            return True
-        
-        # 检查类型别名
-        real_type = self.get_real_type(clean_name)
-        if real_type != clean_name:
-            return self.is_enum_type(real_type)
+        # 检查typedef是否指向enum
+        if kind == 'typedef':
+            type_info = self._find_type_by_name(type_name)
+            if type_info:
+                real_type = type_info.get('real_type')
+                return real_type == 'enum' or type_info.get('type', '').startswith('enum ')
         
         return False
         
-    def is_pointer_type(self, type_name: str) -> bool:
+    def is_pointer_type(self, type_name: str, visited: Set[str] = None) -> bool:
         """判断是否为指针类型"""
-        # 检查直接指针语法
-        if '*' in type_name:
-            return True
-            
-        # 清理类型名称
-        clean_name = self._clean_type_name(type_name)
+        if visited is None:
+            visited = set()
         
-        # 检查当前文件和全局的指针类型集合
-        if clean_name in self._current_pointer_types or clean_name in self._global_pointer_types:
+        # 防止循环引用
+        if type_name in visited:
+            logger.warning(f"Detected circular reference in is_pointer_type: {type_name}")
+            return False
+        visited.add(type_name)
+        
+        kind = self._get_type_kind(type_name)
+        if kind == 'pointer':
             return True
-            
-        # 检查类型别名
-        real_type = self.get_real_type(clean_name)
-        if real_type != clean_name:
-            return self.is_pointer_type(real_type)
+        
+        # 检查typedef是否指向pointer
+        if kind == 'typedef':
+            type_info = self._find_type_by_name(type_name)
+            if type_info:
+                real_type = type_info.get('real_type')
+                return real_type == 'pointer' or '*' in type_info.get('type', '')
             
         return False
         
@@ -448,38 +555,74 @@ class TypeManager:
         if isinstance(type_name, dict):
             type_name = type_name.get('base_type', '')
         
-        # 防止循环引用
-        if type_name in visited:
-            logger.warning(f"Detected circular type reference: {type_name}")
-            return type_name
-        visited.add(type_name)
+        # 对于复合类型（数组、指针），先提取基础类型名
+        original_type = type_name
+        clean_base_type = self._clean_type_name(type_name)
         
-        # 检查内置类型别名
-        if type_name in self.BASIC_TYPES:
-            return type_name
+        # 防止循环引用 - 使用清理后的基础类型进行检查
+        if clean_base_type in visited:
+            logger.warning(f"Detected circular type reference: {clean_base_type}")
+            return original_type
+        visited.add(clean_base_type)
         
-        if type_name in self.TYPE_ALIASES:
-            alias_type = self.TYPE_ALIASES[type_name]
+        # 检查基础类型是否为内置类型
+        if clean_base_type in self.BASIC_TYPES:
+            return original_type  # 返回原始类型（保留数组/指针信息）
+        
+        # 检查是否为预定义的类型别名
+        if clean_base_type in self.TYPE_ALIASES:
+            alias_type = self.TYPE_ALIASES[clean_base_type]
             if isinstance(alias_type, dict):
                 alias_type = alias_type.get('base_type', '')
-            return self.get_real_type(alias_type, visited)
+            # 对于别名，需要重构完整类型
+            return self._reconstruct_type(original_type, clean_base_type, alias_type)
         
-        # 使用新的统一存储方式查找
+        # 使用新的统一存储方式查找类型别名
         # 优先检查当前文件的类型别名
         for typedef in self._current_types:
-            if typedef.get('kind') == 'typedef' and typedef.get('name') == type_name:
+            if typedef.get('kind') == 'typedef' and typedef.get('name') == clean_base_type:
                 base_type = typedef.get('base_type', '')
-                if base_type != type_name:  # 避免自引用
-                    return self.get_real_type(base_type, visited)
+                if base_type != clean_base_type:  # 避免自引用
+                    return self._reconstruct_type(original_type, clean_base_type, base_type)
         
         # 然后检查全局类型别名
         for typedef in self._global_types:
-            if typedef.get('kind') == 'typedef' and typedef.get('name') == type_name:
+            if typedef.get('kind') == 'typedef' and typedef.get('name') == clean_base_type:
                 base_type = typedef.get('base_type', '')
-                if base_type != type_name:  # 避免自引用
-                    return self.get_real_type(base_type, visited)
+                if base_type != clean_base_type:  # 避免自引用
+                    return self._reconstruct_type(original_type, clean_base_type, base_type)
             
-        return type_name
+        return original_type
+    
+    def _reconstruct_type(self, original_type: str, old_base: str, new_base: str) -> str:
+        """重构类型名称：将旧的基础类型替换为新的基础类型，保留修饰符
+        
+        Args:
+            original_type: 原始完整类型，如 "int[10]" 或 "MyType*"
+            old_base: 旧的基础类型，如 "int" 或 "MyType"  
+            new_base: 新的基础类型，如 "int32_t" 或 "struct Point"
+            
+        Returns:
+            重构后的类型名称
+        """
+        # 如果没有修饰符，直接返回新基础类型
+        if original_type == old_base:
+            return new_base
+        
+        # 处理数组类型
+        if '[' in original_type and ']' in original_type:
+            # 提取数组维度部分
+            array_part = original_type[original_type.find('['):]
+            return new_base + array_part
+        
+        # 处理指针类型
+        if '*' in original_type:
+            # 计算指针级别
+            pointer_count = original_type.count('*')
+            return new_base + '*' * pointer_count
+        
+        # 其他情况，直接替换
+        return original_type.replace(old_base, new_base)
     
     def _clean_type_name(self, type_name: str) -> str:
         """清理类型名称，移除前缀和修饰符"""
@@ -489,12 +632,26 @@ class TypeManager:
             type_name = type_name.get('base_type', '')
             logger.debug(f"Extracted base_type from dict: {type_name}")
         
-        # 移除 struct/union/enum 前缀和指针符号
+        # 移除 struct/union/enum 前缀
         clean_name = type_name.replace('struct ', '').replace('union ', '').replace('enum ', '')
         logger.debug(f"After removing prefixes: {clean_name}")
         
-        # 不要移除指针符号，因为它们在类型兼容性检查中很重要
-        # clean_name = clean_name.rstrip('*')
+        # 处理数组类型：提取基础类型，移除数组维度
+        # 例如: int[10] -> int, char[100][50] -> char
+        if '[' in clean_name and ']' in clean_name:
+            base_type = clean_name.split('[')[0].strip()
+            logger.debug(f"Extracted array base type: {base_type}")
+            clean_name = base_type
+        
+        # 处理指针类型：保留指针符号但统一格式
+        # 例如: int * * -> int**
+        if '*' in clean_name:
+            parts = clean_name.split('*')
+            base_part = parts[0].strip()
+            pointer_count = len([p for p in parts[1:] if not p.strip()])
+            if pointer_count > 0:
+                clean_name = base_part + '*' * pointer_count
+                logger.debug(f"Normalized pointer type: {clean_name}")
         
         result = clean_name.strip()
         logger.debug(f"Final cleaned name: {result}")
@@ -713,13 +870,8 @@ class TypeManager:
         """
         result = {
             'base_type': '',
-            'is_const': False,
-            'is_volatile': False,
             'pointer_level': 0,
-            'qualifiers': [],
-            'array_dims': [],
-            'storage_class': None,
-            'is_restrict': False
+            'array_dims': []
         }
         
         # 移除多余空格
@@ -734,18 +886,12 @@ class TypeManager:
         
         # 处理限定符
         if 'const' in type_str:
-            result['is_const'] = True
-            result['qualifiers'].append('const')
             type_str = type_str.replace('const', '').strip()
             
         if 'volatile' in type_str:
-            result['is_volatile'] = True
-            result['qualifiers'].append('volatile')
             type_str = type_str.replace('volatile', '').strip()
             
         if 'restrict' in type_str:
-            result['is_restrict'] = True
-            result['qualifiers'].append('restrict')
             type_str = type_str.replace('restrict', '').strip()
             
         # 处理数组维度
@@ -776,8 +922,9 @@ class TypeManager:
         Returns:
             包含类型详细信息的字典
         """
-        if type_name in self.type_info:
-            type_info = self.type_info[type_name]
+        # 查找类型信息
+        type_info = self._find_type_by_name(type_name)
+        if type_info:
             details = type_info.get('details', {})
             
             # 确保返回所有必要的字段
@@ -794,114 +941,6 @@ class TypeManager:
                 'fields': type_info.get('fields', [])
             }
         return {} 
-
-    def get_type_location(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的位置信息
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            包含位置信息的字典，包括文件、行号和列号
-        """
-        if type_name in self.type_info:
-            return self.type_info[type_name].get('location', {})
-        return {}
-
-    def get_type_comment(self, type_name: str) -> str:
-        """获取类型的注释信息
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            类型的注释字符串，如果没有注释则返回空字符串
-        """
-        if type_name in self.type_info:
-            return self.type_info[type_name].get('comment', '')
-        return ''
-
-    def is_compatible_types(self, type1: str, type2: str) -> bool:
-        """检查两个类型是否兼容"""
-        logger.debug(f"\n=== Checking type compatibility ===")
-        logger.debug(f"Type1: {type1}")
-        logger.debug(f"Type2: {type2}")
-        
-        # 清理类型名称
-        type1 = self._clean_type_name(type1)
-        type2 = self._clean_type_name(type2)
-        logger.debug(f"Cleaned types - Type1: {type1}, Type2: {type2}")
-        
-        # 处理指针类型
-        if '*' in type1 or '*' in type2:
-            logger.debug("Processing pointer types")
-            
-            # 检查是否都是指针类型
-            if '*' not in type1 or '*' not in type2:
-                logger.debug("One type is not pointer - incompatible")
-                return False
-            
-            # 获取指针级别
-            ptr_level1 = type1.count('*')
-            ptr_level2 = type2.count('*')
-            logger.debug(f"Pointer levels - Type1: {ptr_level1}, Type2: {ptr_level2}")
-            
-            if ptr_level1 != ptr_level2:
-                logger.debug("Different pointer levels - incompatible")
-                return False
-            
-            # 获取基本类型（去掉所有指针）
-            base1 = type1.rstrip('*')
-            base2 = type2.rstrip('*')
-            logger.debug(f"Base types - Type1: {base1}, Type2: {base2}")
-            
-            # 获取实际类型（解析类型别名）
-            real_base1 = self.get_real_type(base1)
-            real_base2 = self.get_real_type(base2)
-            logger.debug(f"Real base types - Type1: {real_base1}, Type2: {real_base2}")
-            
-            # void* 可以与任何指针类型兼容
-            # 注意：这里需要检查原始类型和解析后的类型
-            if ('void' in (base1, base2) or 
-                'void' in (real_base1, real_base2)):
-                logger.debug("void* compatibility check passed")
-                return True
-            
-            # 检查基本类型是否兼容
-            if real_base1 in self.BASIC_TYPES and real_base2 in self.BASIC_TYPES:
-                logger.debug("Checking basic type compatibility")
-                type1_info = self.BASIC_TYPES[real_base1]
-                type2_info = self.BASIC_TYPES[real_base2]
-                result = (type1_info['size'] == type2_info['size'] and 
-                         type1_info.get('signed') == type2_info.get('signed'))
-                logger.debug(f"Basic type compatibility result: {result}")
-                return result
-            
-            # 其他情况，类型必须完全相同
-            result = real_base1 == real_base2
-            logger.debug(f"Type equality check result: {result}")
-            return result
-        
-        # 非指针类型的处理
-        logger.debug("Processing non-pointer types")
-        real_type1 = self.get_real_type(type1)
-        real_type2 = self.get_real_type(type2)
-        logger.debug(f"Real types - Type1: {real_type1}, Type2: {real_type2}")
-        
-        # 处理基本类型
-        if real_type1 in self.BASIC_TYPES and real_type2 in self.BASIC_TYPES:
-            logger.debug("Checking basic type compatibility")
-            type1_info = self.BASIC_TYPES[real_type1]
-            type2_info = self.BASIC_TYPES[real_type2]
-            result = (type1_info['size'] == type2_info['size'] and 
-                     type1_info.get('signed') == type2_info.get('signed'))
-            logger.debug(f"Basic type compatibility result: {result}")
-            return result
-        
-        # 其他情况，类型必须完全相同
-        result = real_type1 == real_type2
-        logger.debug(f"Final type equality check result: {result}")
-        return result
 
     def get_enum_values(self, enum_name: str = None) -> Dict[str, Any]:
         """获取枚举值信息"""
@@ -964,7 +1003,8 @@ class TypeManager:
         
         # 处理指针类型
         kind = info.get('kind', '')
-        if kind == 'typedef' and info.get('type', '').endswith('*'):
+        type_str = info.get('type', '')
+        if kind == 'typedef' and type_str and type_str.endswith('*'):
             self._current_pointer_types.add(name)
 
     def get_type_size(self, type_name: str) -> int:
@@ -1124,176 +1164,6 @@ class TypeManager:
         
         return {}
 
-    def validate_type_info(self, type_info: Dict[str, Any]) -> bool:
-        """验证类型信息是否有效
-        
-        Args:
-            type_info: 要验证的类型信息
-            
-        Returns:
-            如果类型信息有效返回True，否则返回False
-        """
-        try:
-            # 检查必要字段
-            required_fields = ['kind', 'name']
-            if not all(field in type_info for field in required_fields):
-                logger.warning(f"Missing required fields in type info: {required_fields}")
-                return False
-            
-            kind = type_info.get('kind')
-            
-            # 验证结构体类型
-            if kind == 'struct':
-                if 'fields' not in type_info:
-                    logger.warning("Missing fields in struct type info")
-                    return False
-                for field in type_info['fields']:
-                    if not isinstance(field, dict) or 'name' not in field or 'type' not in field:
-                        logger.warning(f"Invalid field in struct: {field}")
-                        return False
-                    
-            # 验证联合体类型
-            elif kind == 'union':
-                if 'fields' not in type_info:
-                    logger.warning("Missing fields in union type info")
-                    return False
-                for field in type_info['fields']:
-                    if not isinstance(field, dict) or 'name' not in field or 'type' not in field:
-                        logger.warning(f"Invalid field in union: {field}")
-                        return False
-                    
-            # 验证枚举类型
-            elif kind == 'enum':
-                if 'values' not in type_info:
-                    logger.warning("Missing values in enum type info")
-                    return False
-                if not isinstance(type_info['values'], dict):
-                    logger.warning("Enum values must be a dictionary")
-                    return False
-                
-            # 验证typedef类型
-            elif kind == 'typedef':
-                if 'base_type' not in type_info:
-                    logger.warning("Missing base_type in typedef info")
-                    return False
-                
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error validating type info: {e}")
-            return False
-
-    def get_type_dependencies(self, type_name: str) -> Set[str]:
-        """获取类型的所有依赖类型
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            依赖类型名称的集合
-        """
-        dependencies = set()
-        visited = {type_name}  # 防止循环依赖
-        
-        def collect_dependencies(current_type: str):
-            # 获取实际类型
-            real_type = self.get_real_type(current_type)
-            
-            # 如果是基本类型，不需要继续查找依赖
-            if self.is_basic_type(real_type):
-                return
-            
-            # 查找类型信息
-            type_info = self.find_type_by_name(real_type)
-            if not type_info:
-                return
-                
-            # 处理结构体和联合体类型
-            if type_info.get('kind') in ('struct', 'union'):
-                for field in type_info.get('fields', []):
-                    if isinstance(field, dict):
-                        field_type = field.get('type', '')
-                        if field_type and field_type not in visited:
-                            visited.add(field_type)
-                            dependencies.add(field_type)
-                            collect_dependencies(field_type)
-                            
-            # 处理typedef类型
-            elif type_info.get('kind') == 'typedef':
-                base_type = type_info.get('base_type', '')
-                if base_type and base_type not in visited:
-                    visited.add(base_type)
-                    dependencies.add(base_type)
-                    collect_dependencies(base_type)
-        
-        collect_dependencies(type_name)
-        return dependencies
-
-    def get_type_hierarchy(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的层次结构"""
-        visited = set()
-        
-        def build_hierarchy(current_type: str) -> Dict[str, Any]:
-            if current_type in visited:
-                return {'name': current_type, 'type': 'circular_reference'}
-            
-            visited.add(current_type)
-            hierarchy = {'name': current_type}
-            
-            # 处理指针类型
-            if self.is_pointer_type(current_type):
-                hierarchy['type'] = 'pointer'
-                base_type = current_type.rstrip('*')
-                if base_type and base_type not in visited:
-                    hierarchy['base_type'] = build_hierarchy(base_type)
-                return hierarchy
-            
-            # 获取实际类型
-            real_type = self.get_real_type(current_type)
-            
-            # 查找类型信息
-            type_info = self.find_type_by_name(real_type)
-            
-            # 确定类型种类
-            if self.is_basic_type(real_type):
-                hierarchy['type'] = 'basic'
-            elif type_info:
-                kind = type_info.get('kind', '')
-                hierarchy['type'] = kind
-                
-                if kind in ('struct', 'union'):
-                    hierarchy['fields'] = []
-                    for field in type_info.get('fields', []):
-                        if isinstance(field, dict):
-                            field_type = field.get('type', '')
-                            if field_type and field_type not in visited:
-                                field_hierarchy = build_hierarchy(field_type)
-                                field_hierarchy['field_name'] = field.get('name', '')
-                                hierarchy['fields'].append(field_hierarchy)
-                elif kind == 'typedef':
-                    base_type = type_info.get('base_type', '')
-                    if base_type and base_type not in visited:
-                        hierarchy['base_type'] = build_hierarchy(base_type)
-            
-            visited.remove(current_type)
-            return hierarchy
-        
-        return build_hierarchy(type_name)
-
-    def get_type_size_info(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的大小相关信息
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            包含类型大小信息的字典
-        """
-        return {
-            'size': self.get_type_size(type_name),
-            'alignment': self.get_type_alignment(type_name),
-            'is_packed': self.is_packed_type(type_name)
-        }
 
     def is_packed_type(self, type_name: str) -> bool:
         """检查类型是否是紧凑布局
@@ -1306,211 +1176,6 @@ class TypeManager:
         """
         type_info = self.get_type_details(type_name)
         return type_info.get('packed', False)
-
-    def get_type_attributes(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的属性信息"""
-        # 获取类型信息
-        type_info = None
-        if self.is_struct_type(type_name):
-            type_info = self.get_struct_info(type_name)
-        elif self.is_union_type(type_name):
-            type_info = self.get_union_info(type_name)
-        elif type_name in self.type_info:
-            type_info = self.type_info[type_name]
-        
-        if not type_info:
-            return {}
-        
-        # 合并所有属性
-        attributes = {}
-        # 从 attributes 字段获取
-        attributes.update(type_info.get('attributes', {}))
-        # 从 details 字段获取
-        details = type_info.get('details', {})
-        if details:
-            attributes.update({
-                'packed': details.get('packed', False),
-                'alignment': details.get('alignment'),
-                'visibility': details.get('visibility')
-            })
-        # 从类型信息直接获取
-        if 'packed' in type_info:
-            attributes['packed'] = type_info['packed']
-        
-        return attributes
-
-    def get_type_metadata(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的元数据
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            包含类型元数据的字典
-        """
-        return {
-            'category': self.get_type_category(type_name),
-            'size_info': self.get_type_size_info(type_name),
-            'attributes': self.get_type_attributes(type_name),
-            'location': self.get_type_location(type_name),
-            'comment': self.get_type_comment(type_name),
-            'dependencies': list(self.get_type_dependencies(type_name))
-        }
-
-    def get_type_status(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的状态信息
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            包含类型状态的字典
-        """
-        return {
-            'is_complete': self.is_type_complete(type_name),
-            'is_forward_declared': self.is_forward_declared(type_name),
-            'is_defined': self.is_type_defined(type_name),
-            'scope': self.get_type_scope(type_name)
-        }
-
-    def is_type_complete(self, type_name: str) -> bool:
-        """检查类型是否完整定义
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            如果类型完整定义返回True，否则返回False
-        """
-        if self.is_basic_type(type_name):
-            return True
-        
-        type_info = self.get_type_details(type_name)
-        if not type_info:
-            return False
-        
-        # 检查结构体和联合体是否有字段定义
-        if self.is_struct_type(type_name) or self.is_union_type(type_name):
-            return bool(type_info.get('fields'))
-        
-        # 检查枚举是否有值定义
-        if self.is_enum_type(type_name):
-            return bool(type_info.get('values'))
-        
-        return True
-
-    def is_forward_declared(self, type_name: str) -> bool:
-        """检查类型是否是前向声明
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            如果类型是前向声明返回True，否则返回False
-        """
-        if self.is_basic_type(type_name):
-            return False
-        
-        type_info = self.get_type_details(type_name)
-        return bool(type_info) and not self.is_type_complete(type_name)
-
-    def is_type_defined(self, type_name: str) -> bool:
-        """检查类型是否已定义
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            如果类型已定义返回True，否则返回False
-        """
-        clean_name = self._clean_type_name(type_name)
-        
-        return (any(t.get('name') == clean_name for t in self._global_types) or
-                any(t.get('name') == clean_name for t in self._current_types) or
-                clean_name in self.BASIC_TYPES or 
-                clean_name in self.TYPE_ALIASES)
-
-    def get_type_scope(self, type_name: str) -> str:
-        """获取类型的作用域
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            类型的作用域('global', 'file', 'unknown')
-        """
-        clean_name = self._clean_type_name(type_name)
-        
-        # 检查全局作用域
-        if any(t.get('name') == clean_name for t in self._global_types):
-            return 'global'
-        
-        # 检查文件作用域
-        if any(t.get('name') == clean_name for t in self._current_types):
-            return 'file'
-        
-        if clean_name in self.BASIC_TYPES or clean_name in self.TYPE_ALIASES:
-            return 'global'
-        
-        return 'unknown'
-
-    def get_type_summary(self, type_name: str) -> Dict[str, Any]:
-        """获取类型的完整摘要信息
-        
-        Args:
-            type_name: 类型名称
-            
-        Returns:
-            包含类型完整信息的字典
-        """
-        # 查找类型信息
-        type_info = self.find_type_by_name(type_name)
-        
-        # 如果是基本类型
-        if self.is_basic_type(type_name):
-            real_type = self.get_real_type(type_name)
-            basic_info = self.BASIC_TYPES.get(real_type, {})
-            return {
-                'name': type_name,
-                'kind': 'basic',
-                'real_type': real_type,
-                'size': basic_info.get('size', 0),
-                'alignment': basic_info.get('alignment', 0),
-                'signed': basic_info.get('signed', False),
-                'status': {
-                    'is_complete': True,
-                    'is_defined': True,
-                    'scope': 'global'
-                }
-            }
-        
-        # 如果找到类型信息
-        if type_info:
-            return {
-                'name': type_name,
-                'kind': type_info.get('kind', 'unknown'),
-                'real_type': self.get_real_type(type_name),
-                'size': self.get_type_size(type_name),
-                'alignment': self.get_type_alignment(type_name),
-                'status': self.get_type_status(type_name),
-                'fields': type_info.get('fields', []),
-                'values': type_info.get('values', {}),
-                'attributes': type_info.get('attributes', {}),
-                'comment': type_info.get('comment', ''),
-                'location': type_info.get('location', {})
-            }
-        
-        # 如果未找到类型信息
-        return {
-            'name': type_name,
-            'kind': 'unknown',
-            'real_type': self.get_real_type(type_name),
-            'status': {
-                'is_complete': False,
-                'is_defined': False,
-                'scope': 'unknown'
-            }
-        }
 
     def find_types_by_jsonpath(self, query: str, scope: str = 'all') -> List[Dict[str, Any]]:
         """使用jsonpath查询类型
@@ -1597,7 +1262,7 @@ class TypeManager:
                 return [match.value for match in jsonpath_expr.find(data_source)]
             
         except ImportError:
-            logger.error("jsonpath_ng module not found. Please install it with: pip install jsonpath-ng")
+            logger.error("jsonpath_ng module not found. Please install it with: pip install jsonpath-ng or uv pip install jsonpath-ng")
             return []
         except Exception as e:
             logger.error(f"Error in find_types_by_jsonpath with query '{query}': {e}")

@@ -31,15 +31,15 @@ class CTypeParser:
     macros = declarations['macro_definitions']
     ```
     """
-    def __init__(self):
+    def __init__(self, type_manager: TypeManager = None):
         """初始化类型解析器"""
         # 创建命名日志器
         self.logger = logger.bind(name="TypeParser")
         self.logger.info("=== Initializing CTypeParser ===")
         
         # 初始化组件
-        self.ts_util = TreeSitterUtils()
-        self.type_manager = TypeManager()
+        self.ts_util = TreeSitterUtils.get_instance()
+        self.type_manager = type_manager or TypeManager()
         
         # 配置
         self.pointer_size = 8  # 默认64位系统
@@ -77,14 +77,17 @@ class CTypeParser:
                     except Exception as e:
                         self.logger.warning(f"解析包含文件失败: {include}, 错误: {e}")
             else:
+                # 如果source是字符串，直接作为文件内容使用
                 text = source
                 self.current_file = "input_source"
+                self.logger.debug(f"使用字符串作为文件内容，长度: {len(text)}")
                 
             # 解析为AST
             if not tree:
                 self.logger.info("使用 TreeSitterUtil 解析文件")
                 try:
-                    tree = self.ts_util.parse_file(text if isinstance(source, str) else str(source))
+                    # 直接传递文件内容，避免路径检查
+                    tree = self.ts_util.parse_source_code(text)
                     if tree:
                         self.logger.debug("语法树解析成功")
                     else:
@@ -99,7 +102,11 @@ class CTypeParser:
             
             self.logger.info("开始遍历语法树")
             try:
-                self._parse_tree(tree)
+                # 如果tree是Tree对象，获取其root_node
+                if hasattr(tree, 'root_node'):
+                    self._parse_tree(tree.root_node)
+                else:
+                    self._parse_tree(tree)
                 self.logger.debug("语法树遍历完成")
             except Exception as e:
                 self.logger.exception(f"语法树遍历出错: {e}")
@@ -107,15 +114,22 @@ class CTypeParser:
             
             # 输出解析结果统计
             try:
-                type_info = self.type_manager.export_type_info()
+                type_info = self.type_manager.export_types()
                 self.logger.info("=== Parsing completed ===")
                 self.logger.debug(f"解析结果: {json.dumps(type_info, indent=2)}")
 
+                # 按类型分类
+                typedef_types = [t for t in type_info["types"] if t.get('kind') == 'typedef']
+                struct_types = [t for t in type_info["types"] if t.get('kind') == 'struct']
+                union_types = [t for t in type_info["types"] if t.get('kind') == 'union']
+                enum_types = [t for t in type_info["types"] if t.get('kind') == 'enum']
+
+
                 self.logger.info("解析完成，统计信息:")
-                self.logger.info(f"- 类型定义(typedef): {len(type_info['typedef_types'])} 个")
-                self.logger.info(f"- 结构体(struct): {len(type_info['struct_types'])} 个")
-                self.logger.info(f"- 联合体(union): {len(type_info['union_types'])} 个")
-                self.logger.info(f"- 枚举(enum): {len(type_info['enum_types'])} 个")
+                self.logger.info(f"- 类型定义(typedef): {len(typedef_types)} 个")
+                self.logger.info(f"- 结构体(struct): {len(struct_types)} 个")
+                self.logger.info(f"- 联合体(union): {len(union_types)} 个")
+                self.logger.info(f"- 枚举(enum): {len(enum_types)} 个")
                 self.logger.info(f"- 指针类型: {len(type_info['pointer_types'])} 个")
                 self.logger.info(f"- 宏定义: {len(type_info['macro_definitions'])} 个")
 
@@ -132,6 +146,13 @@ class CTypeParser:
     def _parse_tree(self, node):
         """递归解析语法树节点"""
         self.logger.debug(f"解析节点: {node.type}")
+        
+        # 如果是translation_unit，显示其子节点
+        if node.type == 'translation_unit':
+            self.logger.debug(f"Translation unit children count: {len(node.children)}")
+            for i, child in enumerate(node.children):
+                self.logger.debug(f"  Child {i}: {child.type} - {child.text.decode('utf8')[:50]}...")
+        
         if node.type == 'struct_specifier':
             self._parse_struct_definition(node)
         elif node.type == 'type_definition':
@@ -142,7 +163,10 @@ class CTypeParser:
             self._parse_enum_definition(node)
         elif node.type == 'preproc_def':
             self._parse_macro_definition(node)
-        elif node.type == 'translation_unit' or node.type == 'preproc_ifdef':
+        elif node.type == 'declaration':
+            # 处理声明节点，可能包含typedef
+            self._parse_declaration_node(node)
+        elif node.type == 'translation_unit' or node.type == 'preproc_ifdef' or node.type == 'preproc_ifndef':
             # 递归处理子节点
             for child in node.children:
                 self._parse_tree(child)
@@ -154,8 +178,39 @@ class CTypeParser:
             # 递归处理子节点
             for child in node.children:
                 self._parse_tree(child)
+        elif node.type == 'comment':
+            # 跳过注释
+            pass
+        elif node.type == 'preproc_include':
+            # 跳过include指令
+            pass
+        elif node.type == 'identifier':
+            # 跳过标识符
+            pass
+        elif node.type == '#ifndef' or node.type == '#define' or node.type == '#endif':
+            # 跳过预处理指令
+            pass
         else:
             self.logger.debug(f"Skipping node: {node.type} (text: {node.text.decode('utf8')})")
+
+    def _parse_declaration_node(self, node):
+        """解析声明节点，可能包含typedef"""
+        self.logger.debug(f"解析声明节点: {node.text.decode('utf8')}")
+        
+        # 检查是否是typedef声明
+        for child in node.children:
+            if child.type == 'storage_class_specifier' and child.text.decode('utf8') == 'typedef':
+                # 这是一个typedef声明
+                self._parse_typedef_declaration(node)
+                return
+            elif child.type == 'type_definition':
+                # 这是一个typedef声明
+                self._parse_typedef_declaration(child)
+                return
+        
+        # 如果不是typedef，递归处理子节点
+        for child in node.children:
+            self._parse_tree(child)
 
 
     def _parse_typedef_declaration(self, node):
@@ -172,32 +227,9 @@ class CTypeParser:
 
         declarators = []
         
-        # 添加类型限定符信息
-        type_qualifiers = {
-            'is_const': False,
-            'is_volatile': False,
-            'is_restrict': False,
-            'storage_class': None
-        }
-        
         # 2. 遍历节点获取类型信息
         for child in node.children:
-            # 处理类型限定符
-            if child.type == 'type_qualifier':
-                qualifier = child.text.decode('utf8')
-                if qualifier == 'const':
-                    type_qualifiers['is_const'] = True
-                elif qualifier == 'volatile':
-                    type_qualifiers['is_volatile'] = True
-                elif qualifier == 'restrict':
-                    type_qualifiers['is_restrict'] = True
-            
-            # 处理存储类型
-            elif child.type == 'storage_class_specifier':
-                type_qualifiers['storage_class'] = child.text.decode('utf8')
-            
-            # 处理基本类型
-            elif child.type in ['primitive_type', 'sized_type_specifier']:
+            if child.type in ['primitive_type', 'sized_type_specifier']:
                 if not base_type:  # 只取第一个类型标识符作为基类型
                     real_type = 'base'
                     base_type = child.text.decode('utf8')
@@ -220,36 +252,21 @@ class CTypeParser:
                 # 获取枚举名称
                 base_type, _ = self._parse_enum_definition(child)                
             
-            # 添加函数指针处理
-            elif child.type == 'function_declarator':
-                function_info = self._parse_function_pointer(child)
-                if function_info:
-                    base_type = function_info['return_type']
-                    real_type = 'function_pointer'
-                    
-                    # 更新类型限定符
-                    type_qualifiers.update(function_info['qualifiers'])
-                    
-                    # 构建函数指针类型字符串
-                    param_types = []
-                    for param in function_info['parameters']:
-                        param_type = param['type']
-                        if param['is_pointer']:
-                            param_type += '*' * param['pointer_level']
-                        param_types.append(param_type)
-                    
-                    if function_info['is_variadic']:
-                        param_types.append('...')
-                    
-                    base_type = f"{base_type} (*) ({', '.join(param_types)})"
-                    self.logger.debug(f"Found function pointer type: {base_type}")
             elif child.type == 'type_identifier':
-                declarators.append((child, False))
+                # 这可能是基础类型或声明器
+                if not base_type:
+                    # 如果还没有基础类型，这是基础类型
+                    base_type = child.text.decode('utf8')
+                    real_type = 'base'  # 假设是基本类型，之后会检查
+                    self.logger.debug(f"Found base type identifier: {base_type}")
+                else:
+                    # 如果已经有基础类型，这是声明器
+                    declarators.append((child, False))
             elif child.type == 'pointer_declarator':       
                 current = child
                 pointer_count = 0
                 identifier = None
-                
+
                 while current:
                     if current.type == 'pointer_declarator':
                         pointer_count += 1
@@ -273,6 +290,38 @@ class CTypeParser:
                 
                 if identifier:
                     declarators.append((identifier, pointer_count))
+                    
+            elif child.type == 'function_declarator':
+                # 处理函数指针类型：typedef int (*FuncPtr)(int);
+                self.logger.debug(f"Processing function_declarator: {child.text.decode('utf8')}")
+                
+                # 在function_declarator中查找标识符
+                def find_identifier_in_function_declarator(node):
+                    """递归查找函数声明器中的标识符"""
+                    if node.type == 'type_identifier':
+                        return node
+                    
+                    for child_node in node.children:
+                        result = find_identifier_in_function_declarator(child_node)
+                        if result:
+                            return result
+                    return None
+                
+                identifier = find_identifier_in_function_declarator(child)
+                if identifier:
+                    declarators.append((identifier, 'function'))
+                    self.logger.debug(f"Found function declarator: {identifier.text.decode('utf8')}")
+                    
+            elif child.type == 'array_declarator':
+                # 处理数组类型：typedef int Array[10];
+                self.logger.debug(f"Processing array_declarator: {child.text.decode('utf8')}")
+                
+                # 查找数组声明器中的标识符
+                for array_child in child.children:
+                    if array_child.type == 'type_identifier':
+                        declarators.append((array_child, 'array'))
+                        self.logger.debug(f"Found array declarator: {array_child.text.decode('utf8')}")
+                        break
         
         # 4. 为每个声明器创建类型信息
         for declarator, pointer_info in declarators:
@@ -283,14 +332,31 @@ class CTypeParser:
                 'type': base_type,
                 'base_type': base_type,
                 'real_type': real_type,
-                'function_info': function_info if 'function_info' in locals() else None,
-                'qualifiers': type_qualifiers
             }
             
-            # 处理指针类型
+            # 处理不同类型的声明器
             if pointer_info:
                 if isinstance(pointer_info, int):
+                    # 指针类型
                     typedef_info['type'] = f"{base_type}{'*' * pointer_info}"
+                    typedef_info['real_type'] = 'pointer'
+                elif pointer_info == 'function':
+                    # 函数指针类型
+                    typedef_info['type'] = f"function_pointer"
+                    typedef_info['real_type'] = 'function_pointer'
+                    typedef_info['return_type'] = base_type
+                    self.logger.debug(f"Created function pointer typedef: {typedef_name}")
+                elif pointer_info == 'array':
+                    # 数组类型
+                    typedef_info['type'] = f"array"
+                    typedef_info['real_type'] = 'array'
+                    typedef_info['element_type'] = base_type
+                    self.logger.debug(f"Created array typedef: {typedef_name}")
+            
+            # 确保type字段不为None
+            if typedef_info.get('type') is None:
+                typedef_info['type'] = base_type or 'unknown'
+                self.logger.warning(f"Had to set fallback type for {typedef_name}: {typedef_info['type']}")
             
             typedef_infos.append(typedef_info)
             self.logger.info(f"Added typedef: {json.dumps(typedef_info, indent=2)}")
@@ -354,38 +420,22 @@ class CTypeParser:
                         self.logger.debug(f"字段 {field['name']} 是数组，维度: {field['array_size']}")
                     if field.get('nested_fields'):
                         self.logger.debug(f"字段 {field['name']} 包含 {len(field['nested_fields'])} 个嵌套字段")
+
+                # 计算大小和对齐
+                size_info = self._calc_struct_layout(fields)
+
+                # 添加结构体类型并打印信息
+                type_info = {
+                    'kind': 'struct',
+                    'name': struct_name,
+                    'fields': fields,
+                    'size': size_info['size'],
+                    'alignment': size_info['alignment'],
+                }
+            
+                self._add_type_with_logging(struct_name, type_info)
             else:
                 self.logger.warning("未找到任何字段")
-            
-            # 获取属性和元数据
-            attributes = {}
-            comment = None
-
-            
-            # 尝试获取注释
-            try:
-                comment_node = node.prev_sibling
-                if comment_node and comment_node.type == 'comment':
-                    comment = comment_node.text.decode('utf8').strip('/* \n\t')
-            except Exception as e:
-                self.logger.warning(f"Failed to get comment: {e}")
-
-            # 计算大小和对齐
-            size_info = self._calc_struct_layout(fields)
-
-            # 添加结构体类型并打印信息
-            type_info = {
-                'kind': 'struct',
-                'name': struct_name,
-                'fields': fields,
-                'size': size_info['size'],
-                'alignment': size_info['alignment'],
-                'location': self._get_node_location(node),
-                'attributes': attributes,
-                'comment': comment
-            }
-            
-            self._add_type_with_logging(struct_name, type_info)
 
             return struct_name, fields
             
@@ -445,10 +495,6 @@ class CTypeParser:
                         self.logger.debug(f"字段 {field['name']} 包含 {len(field['nested_fields'])} 个嵌套字段")
             else:
                 self.logger.warning("未找到任何字段")
-            
-            # 获取属性和元数据
-            attributes = {}
-            comment = None
 
             union_info = {
                 'kind': 'union',
@@ -456,9 +502,6 @@ class CTypeParser:
                 'fields': fields,
                 'size': self._calc_union_size(fields),
                 'alignment': self._calc_union_alignment(fields),
-                'location': self._get_node_location(node),
-                'attributes': attributes,
-                'comment': comment
             }
 
             self._add_type_with_logging(union_name, union_info)
@@ -532,29 +575,7 @@ class CTypeParser:
             else:
                 self.logger.warning("未找到任何枚举值")
             
-            # 获取属性和元数据
-            attributes = {}
-            location = {'file': 'unknown', 'line': 0}
-            comment = None
-            
-            # 尝试获取位置信息
-            try:
-                start_point = node.start_point
-                location = {
-                    'file': self.current_file,
-                    'line': start_point[0] + 1
-                }
-            except Exception as e:
-                self.logger.exception(f"Failed to get location info: {e}")
-            
-            # 尝试获取注释
-            try:
-                comment_node = node.prev_sibling
-                if comment_node and comment_node.type == 'comment':
-                    comment = comment_node.text.decode('utf8').strip('/* \n\t')
-            except Exception as e:
-                self.logger.exception(f"Failed to get comment: {e}")
-            
+
             # 添加枚举类型并打印信息
             self._add_type_with_logging(enum_name, {
                 'kind': 'enum',
@@ -562,8 +583,6 @@ class CTypeParser:
                 'values': enum_values,
                 'size': 4,  # 通常枚举类型是int大小
                 'alignment': 4,
-                'location': location,
-                'comment': comment
             })
 
             return enum_name, enum_values
@@ -658,11 +677,6 @@ class CTypeParser:
                 'pointer_type': None,
                 'bit_field': None,
                 'nested_fields': None,
-                'qualifiers': {  # 添加类型限定符信息
-                    'is_const': False,
-                    'is_volatile': False,
-                    'is_restrict': False
-                }
             }
             
             # 1. 获取字段名称
@@ -673,18 +687,7 @@ class CTypeParser:
             
             # 2. 处理类型
             for child in node.children:
-                # 处理类型限定符
-                if child.type == 'type_qualifier':
-                    qualifier = child.text.decode('utf8')
-                    if qualifier == 'const':
-                        field_info['qualifiers']['is_const'] = True
-                    elif qualifier == 'volatile':
-                        field_info['qualifiers']['is_volatile'] = True
-                    elif qualifier == 'restrict':
-                        field_info['qualifiers']['is_restrict'] = True
-                    
-                # 处理基本类型
-                elif child.type in ['primitive_type', 'sized_type_specifier', 'type_identifier']:
+                if child.type in ['primitive_type', 'sized_type_specifier', 'type_identifier']:
                     type_name = child.text.decode('utf8')
                     field_info['type'] = type_name
                     field_info['original_type'] = type_name
@@ -898,12 +901,7 @@ class CTypeParser:
             'is_function_pointer': True,
             'return_type': None,
             'parameters': [],
-            'is_variadic': False,
-            'qualifiers': {
-                'is_const': False,
-                'is_volatile': False,
-                'is_restrict': False
-            }
+            'is_variadic': False
         }
         
         # 解析返回类型
@@ -945,29 +943,15 @@ class CTypeParser:
         param_info = {
             'name': None,
             'type': None,
-            'qualifiers': {
-                'is_const': False,
-                'is_volatile': False,
-                'is_restrict': False
-            },
             'is_pointer': False,
             'pointer_level': 0
         }
         
         # 解析参数类型
         for child in node.children:
-            # 处理类型限定符
-            if child.type == 'type_qualifier':
-                qualifier = child.text.decode('utf8')
-                if qualifier == 'const':
-                    param_info['qualifiers']['is_const'] = True
-                elif qualifier == 'volatile':
-                    param_info['qualifiers']['is_volatile'] = True
-                elif qualifier == 'restrict':
-                    param_info['qualifiers']['is_restrict'] = True
-            
+
             # 处理基本类型
-            elif child.type in ['primitive_type', 'sized_type_specifier', 'type_identifier']:
+            if child.type in ['primitive_type', 'sized_type_specifier', 'type_identifier']:
                 param_info['type'] = child.text.decode('utf8')
             
             # 处理指针
@@ -1023,43 +1007,6 @@ class CTypeParser:
             self.logger.exception(f"解析位域值失败: {text}, 错误: {e}")
             return None, text 
 
-    def _calc_struct_layout(self, fields: List) -> Dict:
-        """结构体布局计算"""
-        max_align = 1
-        current_offset = 0
-        total_size = 1
-        
-        # for field in fields:
-        #     type_info = self.type_manager.get_type_size_info(field['type'])
-        #     size = type_info.get('size', 0) if type_info else 0
-        #     align = type_info.get('alignment', 1) if type_info else 1
-            
-        #     padding = (-current_offset) % align
-        #     current_offset += padding
-        #     field['offset'] = current_offset
-        #     current_offset += size
-        #     max_align = max(max_align, align)
-        
-        # total_size = current_offset + (-current_offset) % max_align
-        return {'size': total_size, 'alignment': max_align}
-
-    def _calc_union_size(self, fields: List) -> int:
-        """联合体大小计算"""
-        max_size = 0
-        # for field in fields:
-        #     type_info = self.type_manager.get_type_size_info(field['type'])
-        #     size = type_info.get('size', 0) if type_info else 0
-        #     max_size = max(max_size, size)
-        return 1
-
-    def _calc_union_alignment(self, fields: List) -> int:
-        """联合体对齐计算"""
-        max_align = 1
-        # for field in fields:
-        #     type_info = self.type_manager.get_type_size_info(field['type'])
-        #     align = type_info.get('alignment', 1) if type_info else 1
-        #     max_align = max(max_align, align)
-        return max_align
     def _print_type_info(self, type_name: str, type_info: Dict[str, Any], indent: int = 0):
         """打印类型信息
         
@@ -1104,15 +1051,6 @@ class CTypeParser:
             # 如果基类型是复杂类型，递归打印
             if isinstance(base_type, dict):
                 self._print_type_info(f"{type_name}_base", base_type, indent + 1)
-        
-        # 打印属性和元数据
-        if 'attributes' in type_info:
-            self.logger.info(f"{prefix}Attributes: {type_info['attributes']}")
-        if 'location' in type_info:
-            loc = type_info['location']
-            self.logger.info(f"{prefix}Defined at: {loc.get('file', 'unknown')}:{loc.get('line', '?')}")
-        if 'comment' in type_info:
-            self.logger.info(f"{prefix}Comment: {type_info['comment']}")
 
     def _add_type_with_logging(self, type_name: str, type_info: Dict[str, Any]):
         """添加类型并打印详细信息"""
@@ -1120,4 +1058,139 @@ class CTypeParser:
         self.type_manager.register_type(type_name, type_info)
         
         # 打印类型信息
-        self._print_type_info(type_name, type_info) 
+        self._print_type_info(type_name, type_info)
+
+    def _calc_struct_layout(self, fields: List[Dict[str, Any]]) -> Dict[str, int]:
+        """计算结构体布局
+        
+        Args:
+            fields: 字段列表
+            
+        Returns:
+            包含size和alignment的字典
+        """
+        if not fields:
+            return {'size': 0, 'alignment': 1}
+        
+        current_offset = 0
+        max_alignment = 1
+        
+        for field in fields:
+            if not isinstance(field, dict):
+                continue
+                
+            field_type = field.get('type', '')
+            field_size = self._calc_field_size(field)
+            field_alignment = self._calc_field_alignment(field)
+            
+            # 更新最大对齐要求
+            max_alignment = max(max_alignment, field_alignment)
+            
+            # 计算当前字段的对齐后偏移量
+            current_offset = (current_offset + field_alignment - 1) & ~(field_alignment - 1)
+            field['offset'] = current_offset
+            
+            # 更新偏移量
+            current_offset += field_size
+        
+        # 结构体总大小需要对齐到最大对齐要求
+        total_size = (current_offset + max_alignment - 1) & ~(max_alignment - 1)
+        
+        return {
+            'size': total_size,
+            'alignment': max_alignment
+        }
+    
+    def _calc_union_size(self, fields: List[Dict[str, Any]]) -> int:
+        """计算联合体大小
+        
+        Args:
+            fields: 字段列表
+            
+        Returns:
+            联合体大小
+        """
+        if not fields:
+            return 0
+        
+        max_size = 0
+        for field in fields:
+            field_size = self._calc_field_size(field)
+            max_size = max(max_size, field_size)
+        
+        return max_size
+    
+    def _calc_union_alignment(self, fields: List[Dict[str, Any]]) -> int:
+        """计算联合体对齐要求
+        
+        Args:
+            fields: 字段列表
+            
+        Returns:
+            联合体对齐要求
+        """
+        if not fields:
+            return 1
+        
+        max_alignment = 1
+        for field in fields:
+            field_alignment = self._calc_field_alignment(field)
+            max_alignment = max(max_alignment, field_alignment)
+        
+        return max_alignment
+    
+    def _calc_field_size(self, field: Dict[str, Any]) -> int:
+        """计算字段大小
+        
+        Args:
+            field: 字段信息
+            
+        Returns:
+            字段大小（字节）
+        """
+        field_type = field.get('type', '')
+        
+        # 处理位域
+        if field.get('bit_field') is not None:
+            # 位域按位计算，但至少占用1字节
+            bit_size = field['bit_field']
+            return max(1, (bit_size + 7) // 8)
+        
+        # 处理数组
+        array_size = field.get('array_size')
+        if array_size:
+            base_size = self.type_manager.get_type_size(field_type)
+            total_elements = 1
+            for size in array_size:
+                if isinstance(size, int):
+                    total_elements *= size
+                else:
+                    # 对于动态或变量大小，假设为1
+                    total_elements *= 1
+            return base_size * total_elements
+        
+        # 普通字段
+        return self.type_manager.get_type_size(field_type)
+    
+    def _calc_field_alignment(self, field: Dict[str, Any]) -> int:
+        """计算字段对齐要求
+        
+        Args:
+            field: 字段信息
+            
+        Returns:
+            字段对齐要求（字节）
+        """
+        field_type = field.get('type', '')
+        
+        # 处理位域
+        if field.get('bit_field') is not None:
+            # 位域通常按整型对齐
+            return 4
+        
+        # 处理数组 - 数组对齐与元素类型对齐相同
+        if field.get('array_size'):
+            return self.type_manager.get_type_alignment(field_type)
+        
+        # 普通字段
+        return self.type_manager.get_type_alignment(field_type) 

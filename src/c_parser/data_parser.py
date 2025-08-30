@@ -1,51 +1,118 @@
 from typing import Dict, Any, Optional, List, Tuple, Union
-from pathlib import Path
 from utils.logger import logger 
+from pathlib import Path
 from .core.tree_sitter_utils import TreeSitterUtils
-from .core.expression_parser import ExpressionParser
 from .core.data_manager import DataManager
+from .core.expression_parser import ExpressionParser
 from .type_parser import CTypeParser
 from .core.type_manager import TypeManager
-
-
+from tree_sitter import Node
+import json
+import copy
 
 
 class CDataParser:
-    """C数据解析器"""
+    """C数据解析器 - 重构版本
+    
+    主要功能：
+    1. 解析C文件中的类型定义（结构体、联合体、枚举等）
+    2. 解析全局变量定义
+    3. 基于AST节点的统一解析流程
+    4. 支持嵌套结构体和结构体数组
+    5. 集成了原ValueParser的功能
+    """
     
     def __init__(self, type_manager: TypeManager = None):
-        logger.info("=== Initializing CDataParser ===")
+        logger.info("=== Initializing CDataParser (Refactored) ===")
         self.type_manager = type_manager or TypeManager()
         self.tree_sitter = TreeSitterUtils.get_instance()
-        self.data_manager = DataManager()
-        self.type_parser = CTypeParser()
+        self.data_manager = DataManager(self.type_manager)
+        self.type_parser = CTypeParser(self.type_manager)
+        self.current_file = None
         
         # 输出类型统计信息
-        type_info = self.data_manager.get_type_info()
-        logger.info("\nLoaded type definitions:")
-        logger.info(f"- Typedefs:   {len(type_info['current']['typedef_types'])} items")
-        logger.info(f"- Structs:    {len(type_info['current']['struct_info'])} items")
-        logger.info(f"- Unions:     {len(type_info['current']['union_info'])} items")
-        logger.info(f"- Enums:      {len(type_info['current']['enum_types'])} items")
+        self._log_initialization_stats()
         logger.info("=== Initialization Complete ===\n")
         
-    def parse_file(self, file_path: str) -> Dict[str, Any]:
-        """解析C头文件"""
-        logger.info(f"\n=== Parsing File: {file_path} ===")
+    def _log_initialization_stats(self) -> None:
+        """记录初始化统计信息"""
+        type_info = self.data_manager.get_type_info()
+        logger.info("\nLoaded type definitions:")
+        logger.info(f"- types:   {len(type_info['global']['types'])} items")
+        logger.info(f"- pointer_types:    {len(type_info['global']['pointer_types'])} items")
+        logger.info(f"- macro_definitions:     {len(type_info['global']['macro_definitions'])} items")
         
-        # 解析文件
-        logger.info("Step 1: Parsing source file...")
-        ast = self.tree_sitter.parse_source(file_path)
+    def parse_file(self, source: Union[str, Path]) -> Dict[str, Any]:
+        """解析C文件
         
-        # 处理AST
-        logger.info("\nStep 2: Processing AST...")
-        self._process_ast(ast)
+        解析步骤：
+        1. 读取文件内容
+        2. 解析类型定义（必须先于变量解析）
+        3. 解析全局变量
+        4. 收集和返回结果
         
-        # 获取结果
-        logger.info("\nStep 3: Collecting results...")
-        result = self.data_manager.get_all_data()
+        Args:
+            source: C文件路径或者文件内容
+            
+        Returns:
+            Dict[str, Any]: 解析结果，包含类型定义和变量信息
+        """
+        logger.info(f"\n=== Parsing File: {source} ===")
         
-        # 输出统计信息
+        try:
+            # Step 1: 读取文件
+            if isinstance(source, str):
+                # 如果source是字符串，检查是否为文件路径
+                if Path(source).exists():
+                    text = self._read_file(source)
+                else:
+                    text = source  # 作为源代码字符串处理
+            else:
+                text = self._read_file(source)
+            
+            # Step 2: 解析类型定义（必须先于变量解析）
+            logger.info("Step 1: Parsing type definitions...")
+            self.type_parser.parse_declarations(text)
+            
+            # Step 3: 解析全局变量
+            logger.info("\nStep 2: Parsing global variables...")
+            ast = self.tree_sitter.parse(text)
+            # 如果ast是Tree对象，获取其root_node
+            if hasattr(ast, 'root_node'):
+                ast = ast.root_node
+            self._parse_global_variables(ast)
+            
+            # Step 4: 收集结果
+            logger.info("\nStep 3: Collecting results...")
+            result = self.data_manager.get_all_data()
+            
+            # 输出统计信息
+            self._log_parsing_results(result)
+            
+            logger.info("=== Parsing Complete ===\n")
+            return result
+            
+        except Exception as e:
+            logger.exception(f"Failed to parse file {source}: {e}")
+            raise
+    
+    def _read_file(self, file_path: str) -> str:
+        """读取文件内容"""
+        file_path_obj = Path(file_path)
+        self.current_file = str(file_path_obj)
+        
+        try:
+            text = file_path_obj.read_text(encoding='utf-8')
+            logger.debug(f"成功读取文件: {file_path_obj}")
+            logger.debug(f"文件内容长度: {len(text)}")
+            logger.debug(f"文件内容预览: {text[:200]}...")
+            return text
+        except Exception as e:
+            logger.error(f"读取文件失败: {file_path_obj}, 错误: {e}")
+            raise
+    
+    def _log_parsing_results(self, result: Dict[str, Any]) -> None:
+        """记录解析结果统计信息"""
         logger.info("\nParsing results:")
         logger.info(f"- Structs:    {len(result['structs'])} items")
         logger.info(f"- Unions:     {len(result['unions'])} items")
@@ -54,718 +121,770 @@ class CDataParser:
         logger.info(f"- Variables:  {len(result['variables']['variables'])} items")
         logger.info(f"- Arrays:     {len(result['variables']['array_vars'])} items")
         logger.info(f"- Pointers:   {len(result['variables']['pointer_vars'])} items")
-        logger.info(f"- Structs:    {len(result['variables']['struct_vars'])} items")
+        logger.info(f"- Struct vars: {len(result['variables']['struct_vars'])} items")
         
-        logger.info("=== Parsing Complete ===\n")
-        return result
+    def _parse_global_variables(self, ast_node: Node) -> None:
+        """解析全局变量定义
         
-    def parse_global_variables(self, source_code: str) -> Dict[str, Any]:
-        """解析全局变量定义"""
+        Args:
+            ast_node: AST根节点
+        """
         logger.info("\n=== Parsing Global Variables ===")
         
-        # 解析代码
-        logger.info("Step 1: Parsing source code...")
-        ast = self.tree_sitter.parse_source(source_code)
+        try:
+            self._process_ast_node(ast_node)
+            logger.info("=== Global Variables Parsing Complete ===\n")
+        except Exception as e:
+            logger.exception(f"Failed to parse global variables: {e}")
+            raise
         
-        # 解析类型定义
-        logger.info("\nStep 2: Parsing type definitions...")
-        self._parse_current_file_types(ast)
+    def _process_ast_node(self, node: Node) -> None:
+        """处理AST节点，递归查找变量声明
         
-        # 处理AST
-        logger.info("\nStep 3: Processing AST...")
-        self._process_ast(ast)
+        Args:
+            node: 要处理的AST节点
+        """
+        try:
+            for child in node.children:
+                if child.type == 'declaration':
+                    if self._is_variable_declaration(child):
+                        self._parse_variable_declaration(child)
+                elif child.type == 'translation_unit':
+                    self._process_ast_node(child)  # 递归处理
+            
+        except Exception as e:
+            logger.exception(f"Failed to process AST node: {e}")
+            raise
+    
+    def _is_variable_declaration(self, node: Node) -> bool:
+        """判断是否为变量声明（而不是函数声明）"""
+        try:    
+            # 检查是否包含变量声明的关键节点
+            for child in node.children:
+                if child.type in ['init_declarator', 'identifier', 'array_declarator', 'pointer_declarator']:
+                    return True
+                elif child.type == 'function_declarator':
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            logger.exception(f"Error checking if variable declaration: {e}")
+            return False
+            
+    def _parse_variable_declaration(self, node: Node) -> None:
+        """解析变量声明节点 - 基于AST节点的新流程
         
-        # 获取结果
-        logger.info("\nStep 4: Collecting results...")
-        result = {
-            'types': self.data_manager.get_type_info(),
-            'variables': self.data_manager.get_variables()
+        Args:
+            node: 变量声明的AST节点
+        """
+        try:
+            node_text = self.tree_sitter.get_node_text(node)
+            display_text = node_text[:100] + '...' if len(node_text) > 100 else node_text
+            logger.info(f"\n=== Parsing Variable Declaration (AST-based): {display_text} ===")
+            
+            # 初始化变量信息
+            variable_info = self._init_variable_info(node)
+            
+            # 基于AST节点解析完整的变量信息
+            self._parse_variable_from_ast(node, variable_info)
+            
+            # 记录和存储结果
+            self._log_and_store_variable(variable_info)
+            
+        except Exception as e:
+            logger.exception(f"Failed to parse variable declaration: {e}")
+            raise
+    
+    def _init_variable_info(self, node: Node) -> Dict[str, Any]:
+        """初始化变量信息结构"""
+        return {
+            'name': None,
+            'type': None,
+            'is_const': False,
+            'is_volatile': False,
+            'is_restrict': False,
+            'storage_class': None,
+            'is_pointer': False,
+            'pointer_level': 0,
+            'array_size': [],
+            'initial_value': None,
+            'parsed_value': None,
+            'initializer_node': None,
+            'location': self._get_node_location(node),
+            'typeinfo': None
+        }
+    
+    def _parse_variable_from_ast(self, node: Node, variable_info: Dict[str, Any]) -> None:
+        """基于AST节点解析变量的完整信息
+        
+        Args:
+            node: 变量声明的AST节点
+            variable_info: 变量信息字典
+        """
+        logger.debug(f"Parsing variable from AST node: {node.type}")
+        
+        # 第一步：解析类型限定符和存储类
+        self._extract_qualifiers_and_storage(node, variable_info)
+        
+        # 第二步：解析基础类型
+        self._extract_base_type(node, variable_info)
+        
+        # 第三步：解析声明符（变量名、指针、数组）
+        self._extract_declarator_info(node, variable_info)
+        
+        # 第四步：解析初始化器
+        self._extract_initializer(node, variable_info)
+        
+        # 第五步：构建完整类型信息
+        self._build_complete_type_info(variable_info)
+        
+        # 第六步：解析初始化值
+        self._parse_initialization_value(variable_info)
+    
+    def _extract_qualifiers_and_storage(self, node: Node, variable_info: Dict[str, Any]) -> None:
+        """提取类型限定符和存储类信息"""
+        for child in node.children:
+            if child.type == 'type_qualifier':
+                qualifier = self.tree_sitter.get_node_text(child)
+                if qualifier == 'const':
+                    variable_info['is_const'] = True
+                elif qualifier == 'volatile':
+                    variable_info['is_volatile'] = True
+                elif qualifier == 'restrict':
+                    variable_info['is_restrict'] = True
+            elif child.type == 'storage_class_specifier':
+                variable_info['storage_class'] = self.tree_sitter.get_node_text(child)
+    
+    def _extract_base_type(self, node: Node, variable_info: Dict[str, Any]) -> None:
+        """提取基础类型信息"""
+        type_parts = []
+        
+        for child in node.children:
+            if child.type in ['primitive_type', 'sized_type_specifier', 'type_identifier']:
+                type_parts.append(self.tree_sitter.get_node_text(child))
+            elif child.type in ['struct_specifier', 'union_specifier', 'enum_specifier']:
+                # 处理复合类型
+                type_name = self._extract_composite_type_name(child)
+                if type_name:
+                    type_parts.append(type_name)
+        
+        if type_parts:
+            base_type = ' '.join(type_parts)
+            variable_info['type'] = base_type
+  
+            logger.debug(f"Extracted base type: {base_type}")
+   
+    def _extract_composite_type_name(self, node: Node) -> Optional[str]:
+        """提取复合类型名称（struct/union/enum）"""
+        prefix = node.type.replace('_specifier', '')
+        
+        # 查找类型标识符
+        for child in node.children:
+            if child.type == 'type_identifier':
+                name = self.tree_sitter.get_node_text(child)
+                return f"{prefix} {name}"
+        
+        # 如果没有名称，可能是匿名类型
+        return None
+    
+    def _extract_declarator_info(self, node: Node, variable_info: Dict[str, Any]) -> None:
+        """提取声明符信息（变量名、指针、数组）"""
+        # 查找主要的声明符节点
+        declarator_node = self._find_main_declarator(node)
+        
+        if declarator_node:
+            self._parse_declarator_node(declarator_node, variable_info)
+        else:
+            raise ValueError(f"No declarator node found for variable: {variable_info['name']}")
+    
+    def _find_main_declarator(self, node: Node) -> Optional[Node]:
+        """查找主要的声明符节点"""
+        for child in node.children:
+            if child.type == 'init_declarator':
+                # 从init_declarator中查找声明符
+                for init_child in child.children:
+                    if init_child.type in ['identifier', 'pointer_declarator', 'array_declarator']:
+                        return init_child
+            elif child.type in ['identifier', 'pointer_declarator', 'array_declarator']:
+                return child
+        return None
+    
+    def _parse_declarator_node(self, declarator_node: Node, variable_info: Dict[str, Any]) -> None:
+        """解析声明符节点"""
+        if declarator_node.type == 'identifier':
+            variable_info['name'] = self.tree_sitter.get_node_text(declarator_node)
+            
+        elif declarator_node.type == 'pointer_declarator':
+            self._parse_pointer_declarator(declarator_node, variable_info)
+            
+        elif declarator_node.type == 'array_declarator':
+            self._parse_array_declarator(declarator_node, variable_info)
+    
+    def _parse_pointer_declarator(self, node: Node, variable_info: Dict[str, Any]) -> None:
+        """解析指针声明符"""
+        pointer_level = 0
+        current_node = node
+        
+        # 计算指针级别并找到最终的标识符
+        while current_node and current_node.type == 'pointer_declarator':
+            pointer_level += 1
+            next_node = None
+            
+            for child in current_node.children:
+                if child.type == 'identifier':
+                    variable_info['name'] = self.tree_sitter.get_node_text(child)
+                    break
+                elif child.type in ['pointer_declarator', 'array_declarator']:
+                    next_node = child
+                    break
+            
+            current_node = next_node
+        
+        # 处理最后的数组声明符
+        if current_node and current_node.type == 'array_declarator':
+            self._parse_array_declarator(current_node, variable_info)
+        
+        variable_info['is_pointer'] = pointer_level > 0
+        variable_info['pointer_level'] = pointer_level
+        
+        logger.debug(f"Parsed pointer: level={pointer_level}, name={variable_info['name']}")
+    
+    def _parse_array_declarator(self, node: Node, variable_info: Dict[str, Any]) -> None:
+        """解析数组声明符"""
+        array_sizes = []
+        current_node = node
+        
+        # 递归解析嵌套的数组声明符
+        while current_node and current_node.type == 'array_declarator':
+            dimension = self._extract_array_dimension(current_node)
+            if dimension is not None:
+                array_sizes.append(dimension)
+            
+            # 查找下一层或标识符
+            next_node = None
+            for child in current_node.children:
+                if child.type == 'identifier':
+                    variable_info['name'] = self.tree_sitter.get_node_text(child)
+                elif child.type in ['array_declarator', 'pointer_declarator']:
+                    next_node = child
+                    break
+            
+            current_node = next_node
+        
+        # 处理最后的指针声明符
+        if current_node and current_node.type == 'pointer_declarator':
+            self._parse_pointer_declarator(current_node, variable_info)
+        
+        # 反转数组维度以保持正确的顺序
+        array_sizes.reverse()
+        
+        variable_info['array_size'] = array_sizes
+        
+        logger.debug(f"Parsed array: sizes={array_sizes}, name={variable_info['name']}")
+    
+    def _extract_array_dimension(self, array_node: Node) -> Union[int, str, None]:
+        """提取数组维度"""
+        array_close = [0, 0]
+        array_size = 'dynamic'
+        for child in array_node.children:
+
+            if child.type == '[':
+                array_close[0] += 1
+            elif child.type == ']':
+                array_close[1] += 1
+            # 处理数组大小表达式
+            elif child.type in [
+                'number_literal', 'hex_literal', 'octal_literal',
+                'decimal_literal', 'binary_expression','preproc_arg'
+            ] or( array_close[0] and array_close[0] != array_close[1]):
+                try:
+                    raw_value = self.tree_sitter.get_node_text(child)
+                    
+                    # 使用ExpressionParser解析
+                    parsed_value, value_type = ExpressionParser.parse(
+                        raw_value,
+                        self.type_manager.get_enum_values(),
+                        self.type_manager.get_macro_definition()
+                    )
+                    
+                    if isinstance(parsed_value, (int, float)):
+                        array_size = int(parsed_value)
+                    else:
+                        array_size = raw_value
+                        
+                except Exception as e:
+                    logger.warning(f"Could not parse array size expression: {raw_value}, error: {e}")
+                    array_size = self.tree_sitter.get_node_text(child)
+
+        if array_close[0] != array_close[1]:
+            raise ValueError(f"Array dimension mismatch: {array_close}")
+        # 如果没有找到大小表达式，返回'dynamic'表示动态数组
+        return array_size
+    
+    def _extract_simple_identifier(self, node: Node, variable_info: Dict[str, Any]) -> None:
+        """提取简单标识符（当没有声明符时）"""
+        for child in node.children:
+            if child.type == 'identifier':
+                variable_info['name'] = self.tree_sitter.get_node_text(child)
+                break
+    
+    def _extract_initializer(self, node: Node, variable_info: Dict[str, Any]) -> None:
+        """提取初始化器信息"""
+        # 查找init_declarator节点
+        init_declarator = None
+        for child in node.children:
+            if child.type == 'init_declarator':
+                init_declarator = child
+                break
+        
+        if not init_declarator:
+            return
+        
+        # 在init_declarator中查找初始化器
+        for child in init_declarator.children:
+            if child.type in [
+                'initializer_list', 'assignment_expression', 'binary_expression',
+                'number_literal', 'string_literal', 'char_literal'
+            ]:
+                variable_info['initializer_node'] = child
+                variable_info['initial_value'] = self.tree_sitter.get_node_text(child)
+                logger.debug(f"Found initializer: {variable_info['initial_value']}")
+                break
+    
+    def _build_complete_type_info(self, variable_info: Dict[str, Any]) -> None:
+        """构建完整的类型信息"""
+        base_type = variable_info.get('type', '')
+        pointer_level = variable_info['pointer_level']
+        array_sizes = variable_info.get('array_size', [])
+        
+        # 构建完整类型字符串
+        type_parts = [base_type]
+        
+        # 添加指针
+        if pointer_level > 0:
+            type_parts.append('*' * pointer_level)
+        
+        # 解析类型信息
+        type_context = {
+            'is_const': variable_info['is_const'],
+            'is_volatile': variable_info['is_volatile'],
+            'is_restrict': variable_info['is_restrict'],
+            'storage_class': variable_info['storage_class'],
+            'pointer_level': pointer_level,
+            'array_size': array_sizes
         }
         
-        # 输出统计信息
-        logger.info("\nParsing results:")
-        logger.info(f"- Basic variables:    {len(result['variables']['variables'])} items")
-        logger.info(f"- Struct variables:   {len(result['variables']['struct_vars'])} items")
-        logger.info(f"- Pointer variables:  {len(result['variables']['pointer_vars'])} items")
-        logger.info(f"- Array variables:    {len(result['variables']['array_vars'])} items")
+        resolved_info = self.type_manager.resolve_type(variable_info['type'], type_context)
+        variable_info['typeinfo'] = resolved_info
+    
+        logger.debug(f"Built complete type: {variable_info['type']}")
+    
+    def _parse_initialization_value(self, variable_info: Dict[str, Any]) -> None:
+        """解析初始化值"""
+        if not variable_info.get('initializer_node'):
+            # 如果没有初始化器，不创建默认值，保持为 None
+            variable_info['parsed_value'] = None
+            return
         
-        logger.info("=== Parsing Complete ===\n")
-        return result
-        
-    def _process_ast(self, ast: Dict[str, Any]) -> None:
-        """处理AST"""
         try:
-            # 处理类型定义
-            for name, typedef in ast.get('typedefs', {}).items():
-                type_info = self._process_type_definition(typedef)
-                self.data_manager.add_typedef(name, type_info)
-                
-            # 处理结构体
-            for name, struct in ast.get('structs', {}).items():
-                struct_info = self._process_struct(struct)
-                self.data_manager.add_struct(name, struct_info)
-                
-            # 处理联合体
-            for name, union in ast.get('unions', {}).items():
-                union_info = self._process_union(union)
-                self.data_manager.add_union(name, union_info)
-                
-            # 处理枚举
-            for name, enum in ast.get('enums', {}).items():
-                enum_info = self._process_enum(enum)
-                self.data_manager.add_enum(name, enum_info)
-                
-            # 处理宏定义
-            for name, value in ast.get('defines', {}).items():
-                self.data_manager.add_define(name, value)
-                
-            # 处理包含文件
-            for include in ast.get('includes', []):
-                self.data_manager.add_include(include)
-                
-            # 处理变量声明
-            self._collect_variable_definitions(ast)
+            initializer_node = variable_info['initializer_node']
+            target_type = variable_info.get('typeinfo')
             
+            # 基于AST节点类型选择解析方法
+            parsed_value = self._parse_value_from_node(initializer_node, target_type)
+            variable_info['parsed_value'] = parsed_value
+            
+            # 如果是动态数组，尝试从初始化器推断维度
+            if variable_info.get('array_size'):
+                self._infer_dynamic_array_sizes(variable_info, parsed_value)
+                
         except Exception as e:
-            logger.error(f"Failed to process AST: {e}")
-            raise
-            
-    def _process_struct(self, struct: Dict[str, Any]) -> Dict[str, Any]:
-        """处理结构体信息"""
-        logger.debug(f"\nProcessing struct: {struct.get('name')}")
+            logger.warning(f"Failed to parse initialization value for {variable_info['name']}: {e}")
+            variable_info['parsed_value'] = None
+    
+    def _parse_value_from_node(self, node: Node, type_info: Dict[str, Any]) -> Any:
+        """从AST节点解析值 - 原ValueParser的核心功能"""
         try:
-            fields = []
-            current_offset = 0
-            max_alignment = 1
-            
-            # 处理结构体属性
-            attributes = self._process_attributes(struct.get('attributes', {}))
-            logger.debug(f"Struct attributes: {attributes}")
-            
-            for field in struct['fields']:
-                logger.debug(f"\nProcessing field: {field.get('name')}")
-                field_type = self.data_manager.type_manager.parse_type(field['type'])
-                alignment = self.data_manager.type_manager.get_alignment(field_type)
-                max_alignment = max(max_alignment, alignment)
-                
-                # 计算字段偏移
-                if not attributes.get('packed'):
-                    padding = (alignment - (current_offset % alignment)) % alignment
-                    current_offset += padding
-                    logger.debug(f"Field alignment: {alignment}, padding: {padding}")
-                
-                field_info = {
-                    'name': field['name'],
-                    'type': field_type,
-                    'offset': current_offset,
-                    'size': self.data_manager.type_manager.get_type_size(field_type),
-                    'alignment': alignment,
-                    'bit_offset': field.get('bit_offset'),
-                    'bit_width': field.get('bit_width'),
-                    'comments': self._process_comments(field)
-                }
-                logger.debug(f"Field info: {field_info}")
-                
-                # 处理嵌套结构体
-                if field.get('nested_struct'):
-                    nested_struct = self._process_struct(field['nested_struct'])
-                    field_info['nested_struct'] = nested_struct
-                    # 更新字段类型和大小
-                    field_info['type'] = nested_struct['name']
-                    field_info['size'] = nested_struct['size']
-                    field_info['alignment'] = nested_struct['alignment']
-                
-                fields.append(field_info)
-                
-                # 更新偏移
-                if field.get('bit_width') is not None:
-                    bits = current_offset * 8 + field['bit_width']
-                    current_offset = (bits + 7) // 8
-                else:
-                    current_offset += field_info['size']
-            
-            # 计算结构体总大小，考虑尾部填充
-            if not attributes.get('packed'):
-                padding = (max_alignment - (current_offset % max_alignment)) % max_alignment
-                current_offset += padding
-            
-            logger.debug(f"\nStruct processing complete: {struct.get('name')}")
-            logger.debug(f"Total size: {current_offset}, alignment: {max_alignment}")
-            return {
-                'name': struct['name'],
-                'fields': fields,
-                'size': current_offset,
-                'alignment': max_alignment if not attributes.get('packed') else 1,
-                'attributes': attributes,
-                'is_union': False,
-                'comments': self._process_comments(struct)
-            }
-            
-        except Exception as e:
-            logger.error(f"Failed to process struct {struct.get('name')}: {e}")
-            logger.error(f"Struct data: {struct}")
-            raise
-            
-    def _process_union(self, union: Dict[str, Any]) -> Dict[str, Any]:
-        """处理联合体信息"""
-        try:
-            fields = []
-            max_size = 0
-            max_alignment = 1
-            
-            for field in union['fields']:
-                field_type = self.data_manager.type_manager.parse_type(field['type'])
-                field_size = self.data_manager.type_manager.get_type_size(field_type)
-                field_alignment = self.data_manager.type_manager.get_alignment(field_type)
-                
-                field_info = {
-                    'name': field['name'],
-                    'type': field_type,
-                    'offset': 0,  # 联合体所有字段偏移都是0
-                    'size': field_size,
-                    'alignment': field_alignment,
-                    'bit_offset': field.get('bit_offset'),
-                    'bit_width': field.get('bit_width'),
-                    'comments': self._process_comments(field)
-                }
-                fields.append(field_info)
-                
-                max_size = max(max_size, field_size)
-                max_alignment = max(max_alignment, field_alignment)
-                
-            return {
-                'name': union['name'],
-                'fields': fields,
-                'size': max_size,
-                'alignment': max_alignment,
-                'is_union': True,
-                'comments': self._process_comments(union)
-            }
-            
-        except Exception as e:
-            logger.error(f"Failed to process union: {e}")
-            raise
-            
-    def _process_enum(self, enum: Dict[str, Any]) -> Dict[str, Any]:
-        """处理枚举信息"""
-        try:
-            values = {}
-            current_value = 0
-            
-            for enumerator in enum['values']:
-                name = enumerator['name']
-                if 'value' in enumerator:
-                    value_expr = enumerator['value']
-                    current_value = self._evaluate_constant_expression(value_expr)
-                values[name] = current_value
-                current_value += 1
-                
-            return {
-                'name': enum['name'],
-                'values': values,
-                'size': 4,  # 枚举类型通常是int
-                'alignment': 4,
-                'comments': self._process_comments(enum)
-            }
-            
-        except Exception as e:
-            logger.error(f"Failed to process enum: {e}")
-            raise
-            
-    def _process_type_definition(self, typedef: Dict[str, Any]) -> Dict[str, Any]:
-        """处理类型定义"""
-        try:
-            base_type = typedef['type']
-            type_info = self.data_manager.type_manager.parse_type(base_type)
-            
-            result = {
-                'name': typedef['name'],
-                'base_type': type_info,
-                'is_pointer': typedef.get('is_pointer', False),
-                'pointer_level': typedef.get('pointer_level', 0),
-                'array_size': typedef.get('array_size'),
-                'size': self.data_manager.type_manager.get_type_size(type_info),
-                'alignment': self.data_manager.type_manager.get_alignment(type_info),
-                'comments': self._process_comments(typedef)
-            }
-            
-            if typedef.get('is_function_pointer'):
-                result.update({
-                    'is_function_pointer': True,
-                    'return_type': typedef.get('return_type'),
-                    'parameters': typedef.get('parameters', [])
-                })
-                
-            return result
-            
-        except Exception as e:
-            logger.error(f"Failed to process typedef: {e}")
-            raise
-            
-    def _process_declaration(self, decl: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """处理变量声明"""
-        try:
-            # 首先检查是否是全局变量或extern声明
-            if not self._is_global_declaration(decl) or self._is_extern_declaration(decl):
-                logger.debug("Skipping non-global or extern declaration")
+            if not node:
                 return None
-            
-            # 提取类型信息
-            type_info = self._extract_type_info(decl)
-            type_name = type_info['type']
-            original_type = type_info['original_type']
-            
-            var_info = {
-                'name': decl.get('name'),
-                'type': type_name,
-                'original_type': original_type,
-                'is_pointer': decl.get('is_pointer', False),
-                'pointer_level': decl.get('pointer_level', 0),
-                'array_size': None,
-                'bit_field': decl.get('bit_field'),
-                'comments': self._process_comments(decl),
-                'value': None
-            }
-            
-            # 如果是指针，更新类型名和原始类型
-            if var_info['is_pointer']:
-                var_info['type'] = f"{type_name}{'*' * var_info['pointer_level']}"
-                var_info['original_type'] = f"{original_type}{'*' * var_info['pointer_level']}"
-            
-            # 处理数组大小
-            if 'array_size' in decl:
-                if isinstance(decl['array_size'], list):
-                    # 多维数组
-                    sizes = []
-                    for size_expr in decl['array_size']:
-                        size = self._solve_array_size(size_expr)
-                        sizes.append(size if size is not None else 'dynamic')
-                    var_info['array_size'] = sizes
-                    
-                    # 处理动态数组大小
-                    if 'dynamic' in sizes and 'initializer' in decl:
-                        var_info['array_size'] = self._solve_dynamic_array_size(
-                            decl['initializer'],
-                            sizes
-                        )
-                else:
-                    # 一维数组
-                    size = self._solve_array_size(decl['array_size'])
-                    var_info['array_size'] = size if size is not None else 'dynamic'
-                    
-                    # 处理动态数组大小
-                    if var_info['array_size'] == 'dynamic' and 'initializer' in decl:
-                        var_info['array_size'] = self._solve_dynamic_array_size(
-                            decl['initializer'],
-                            [var_info['array_size']]
-                        )[0]
-            
-            # 处理初始化器
-            if 'initializer' in decl:
-                var_info['value'] = self._evaluate_constant_expression(decl['initializer'])
                 
-                # 处理动态数组大小
-                if var_info.get('array_size') == 'dynamic' and var_info['value']:
-                    if isinstance(var_info['value'], (list, str)):
-                        var_info['array_size'] = len(var_info['value'])
+            logger.debug(f"Parsing value from node type: {node.type}, target type: {type_info['type']}")
             
-            return var_info
-            
-        except Exception as e:
-            logger.error(f"Failed to process declaration: {e}")
-            return None
-            
-    def _evaluate_constant_expression(self, expr: Any) -> Any:
-        """计算常量表达式"""
-        try:
-            logger.debug(f"Evaluating expression: {expr}")
-            value, _ = ExpressionParser.parse(
-                expr,
-                self.data_manager.type_manager.get_enum_values(),
-                self.data_manager.type_manager.get_macro_definition()
-            )
-            logger.debug(f"Evaluated value: {value}")
-            return value
-        except Exception as e:
-            logger.error(f"Failed to evaluate expression: {expr}")
-            logger.error(f"Error details: {str(e)}")
-            logger.error(f"Available enums: {self.data_manager.type_manager.get_enum_info()}")
-            logger.error(f"Available macros: {self.data_manager.type_manager.get_macro_definition()}")
-            return None
-            
-    def _process_attributes(self, attributes: Dict[str, Any]) -> Dict[str, Any]:
-        """处理类型属性"""
-        result = {}
-        try:
-            for attr_name, attr_value in attributes.items():
-                if attr_name == 'packed':
-                    result['packed'] = True
-                elif attr_name == 'aligned':
-                    result['aligned'] = int(attr_value)
-                elif attr_name == 'deprecated':
-                    result['deprecated'] = True
-            return result
-        except Exception as e:
-            logger.error(f"Failed to process attributes: {e}")
-            return {}
-            
-    def _process_comments(self, node: Dict[str, Any]) -> List[str]:
-        """处理注释信息"""
-        comments = []
-        try:
-            for comment in node.get('comments', []):
-                text = comment['text'].strip()
-                if text.startswith('//'):
-                    comments.append(text[2:].strip())
-                elif text.startswith('/**') and text.endswith('*/'):
-                    # 处理文档注释
-                    doc_lines = []
-                    for line in text[3:-2].split('\n'):
-                        line = line.strip().lstrip('*').strip()
-                        if line:
-                            doc_lines.append(line)
-                    if doc_lines:
-                        comments.extend(doc_lines)
-                elif text.startswith('/*') and text.endswith('*/'):
-                    comments.append(text[2:-2].strip())
-            return comments
-        except Exception as e:
-            logger.error(f"Failed to process comments: {e}")
-            return []
-            
-    def _is_global_declaration(self, decl: Dict[str, Any]) -> bool:
-        """检查是否是全局变量声明"""
-        storage = decl.get('storage_class')
-        if storage in ['auto', 'register', 'extern']:
-            return False
-        if decl.get('is_local'):
-            return False
-        return True 
-            
-    def _solve_array_size(self, size_expr: Any) -> Optional[int]:
-        """解析数组大小表达式
-        
-        Args:
-            size_expr: 数组大小表达式
-            
-        Returns:
-            数组大小，如果无法解析则返回None
-        """
-        try:
-            if isinstance(size_expr, dict):
-                if size_expr.get('type') == 'sizeof_expression':
-                    # 处理sizeof表达式
-                    target_type = size_expr.get('target_type')
-                    if target_type:
-                        return self.data_manager.type_manager.get_type_size(target_type)
-                        
-            # 使用ExpressionParser处理其他表达式
-            value, _ = ExpressionParser.parse(
-                size_expr,
-                self.data_manager.type_manager.get_enum_values(),
-                self.data_manager.type_manager.get_macro_definition()
-            )
-            return value
-            
-        except Exception as e:
-            logger.error(f"Failed to solve array size: {e}")
-            return None 
-            
-    def _process_bit_field(self, field: Dict[str, Any], current_offset: int) -> Tuple[int, Dict[str, Any]]:
-        """处理位域字段
-        
-        Args:
-            field: 字段信息
-            current_offset: 当前偏移量
-            
-        Returns:
-            Tuple[int, Dict[str, Any]]: (新偏移量, 处理后的字段信息)
-        """
-        try:
-            field_type = self.data_manager.type_manager.parse_type(field['type'])
-            base_size = self.data_manager.type_manager.get_type_size(field_type)
-            bit_width = field['bit_width']
-            
-            # 计算位偏移
-            bit_offset = (current_offset * 8) % (base_size * 8)
-            
-            # 检查是否需要新的存储单元
-            if bit_offset + bit_width > base_size * 8:
-                current_offset = ((current_offset * 8 + (base_size * 8 - 1)) // (base_size * 8)) * base_size
-                bit_offset = 0
-                
-            field_info = {
-                'name': field['name'],
-                'type': field_type,
-                'offset': current_offset,
-                'size': base_size,
-                'bit_offset': bit_offset,
-                'bit_width': bit_width,
-                'comments': self._process_comments(field)
-            }
-            
-            # 更新偏移
-            if bit_offset + bit_width >= base_size * 8:
-                current_offset += base_size
-                
-            return current_offset, field_info
-            
-        except Exception as e:
-            logger.error(f"Failed to process bit field: {e}")
-            raise 
-            
-    def _print_type_definitions(self) -> None:
-        """打印所有可用的类型定义"""
-        logger.info("\n=== Available Type Definitions ===")
-        
-        # 获取类型信息
-        type_info = self.data_manager.get_type_info()
-        
-        # 打印结构体定义
-        if self.data_manager.structs:
-            logger.info("\nStruct Definitions:")
-            for struct_name, info in self.data_manager.structs.items():
-                logger.info(f"struct {struct_name} {{")
-                for field in info.get('fields', []):
-                    type_str = field.get('type', 'unknown')
-                    name = field.get('name', 'unnamed')
-                    array_size = field.get('array_size')
-                    if array_size:
-                        if isinstance(array_size, list):
-                            dims = ']['.join(str(dim) for dim in array_size)
-                            name += f"[{dims}]"
-                        else:
-                            name += f"[{array_size}]"
-                    logger.info(f"    {type_str} {name};")
-                logger.info("};")
-        
-        # 打印联合体定义
-        if self.data_manager.unions:
-            logger.info("\nUnion Definitions:")
-            for union_name, info in self.data_manager.unions.items():
-                logger.info(f"union {union_name} {{")
-                for field in info.get('fields', []):
-                    type_str = field.get('type', 'unknown')
-                    name = field.get('name', 'unnamed')
-                    array_size = field.get('array_size')
-                    if array_size:
-                        if isinstance(array_size, list):
-                            dims = ']['.join(str(dim) for dim in array_size)
-                            name += f"[{dims}]"
-                        else:
-                            name += f"[{array_size}]"
-                    logger.info(f"    {type_str} {name};")
-                logger.info("};")
-        
-        # 打印类型定义
-        if self.data_manager.typedefs:
-            logger.info("\nTypedef Definitions:")
-            for typedef_name, typedef_info in self.data_manager.typedefs.items():
-                base_type = typedef_info.get('base_type', 'unknown')
-                logger.info(f"typedef {base_type} {typedef_name};")
-        
-        # 打印枚举定义
-        if self.data_manager.enums:
-            logger.info("\nEnum Definitions:")
-            for enum_name, enum_info in self.data_manager.enums.items():
-                logger.info(f"enum {enum_name} {{")
-                for name, value in enum_info.get('values', {}).items():
-                    logger.info(f"    {name} = {value},")
-                logger.info("};")
-        
-        logger.info("\n=== End of Type Definitions ===\n") 
-            
-    def _is_extern_declaration(self, decl: Dict[str, Any]) -> bool:
-        """检查是否是extern声明
-        
-        Args:
-            decl: 声明节点
-            
-        Returns:
-            bool: 是否是extern声明
-        """
-        storage = decl.get('storage_class')
-        return storage == 'extern' 
-            
-    def _solve_dynamic_array_size(self, initializer: Dict[str, Any], array_sizes: List[Any]) -> List[Any]:
-        """解析动态数组的实际大小"""
-        solved_sizes = array_sizes.copy()
-        
-        if 'dynamic' not in solved_sizes:
-            return solved_sizes
-        
-        try:
-            # 处理字符串字面量
-            if initializer.get('type') == 'string_literal':
-                text = initializer.get('value', '')
-                # 处理转义字符
-                text = bytes(text, "utf-8").decode("unicode_escape")
-                # 字符串长度加1（为了包含null终止符）
-                size = len(text) + 1
-                dynamic_index = solved_sizes.index('dynamic')
-                solved_sizes[dynamic_index] = size
-                return solved_sizes
-                
-            # 处理初始化列表
-            if initializer.get('type') == 'initializer_list':
-                elements = initializer.get('elements', [])
-                if elements:
-                    dynamic_index = solved_sizes.index('dynamic')
-                    solved_sizes[dynamic_index] = len(elements)
-                return solved_sizes
-                
-            return solved_sizes
-            
-        except Exception as e:
-            logger.error(f"Failed to solve dynamic array size: {e}")
-            return solved_sizes 
-            
-    def _extract_type_info(self, node: Dict[str, Any]) -> Dict[str, Any]:
-        """提取类型信息
-        
-        Args:
-            node: 类型节点
-            
-        Returns:
-            类型信息字典
-        """
-        logger.debug(f"Extracting type info from: {node}")
-        
-        type_parts = []
-        original_type = None
-        
-        # 处理基本类型
-        if node.get('type') in ['primitive_type', 'sized_type_specifier', 'type_identifier']:
-            type_text = node.get('text', '')
-            type_parts.append(type_text)
-            
-            # 记录原始类型
-            if not original_type:
-                if self.data_manager.type_manager.is_basic_type(type_text):
-                    original_type = type_text
-                else:
-                    original_type = self.data_manager.type_manager.get_real_type(type_text)
-                if not original_type:
-                    logger.error(f"Unknown type: {type_text}")
-                    original_type = type_text
-                    
-        # 处理结构体
-        elif node.get('type') == 'struct_specifier':
-            type_parts.append('struct')
-            struct_name = node.get('name')
-            if struct_name:
-                type_parts.append(struct_name)
-                if not original_type:
-                    original_type = f"struct {struct_name}"
-                    
-        # 处理联合体
-        elif node.get('type') == 'union_specifier':
-            type_parts.append('union')
-            union_name = node.get('name')
-            if union_name:
-                type_parts.append(union_name)
-                if not original_type:
-                    original_type = f"union {union_name}"
-        
-        type_str = ' '.join(type_parts)
-        logger.debug(f"Extracted type: {type_str}")
-        logger.debug(f"Original type: {original_type}")
-        
-        return {
-            "type": type_str,
-            "original_type": original_type
-        } 
-            
-    def _parse_array_dimensions(self, declarator: Dict[str, Any]) -> Tuple[List[Any], str]:
-        """解析数组维度
-        
-        Args:
-            declarator: 数组声明器节点
-            
-        Returns:
-            Tuple[List[Any], str]: (数组维度列表, 数组名称)
-        """
-        array_sizes = []
-        name = None
-        
-        # 获取变量名
-        name = declarator.get('name')
-        if not name:
-            logger.error("Array declarator missing name")
-            return [], None
-        
-        # 获取数组维度
-        dimensions = declarator.get('dimensions', [])
-        for dim in dimensions:
-            if dim.get('type') == 'number_literal':
-                # 固定大小
-                size = int(dim.get('value', 0))
-                array_sizes.append(size)
-            elif dim.get('type') == 'identifier':
-                # 变量大小
-                size_var = dim.get('name')
-                if size_var != name:  # 避免使用数组名本身
-                    array_sizes.append(f"var({size_var})")
-                else:
-                    array_sizes.append("dynamic")
+            # 根据节点类型进行解析
+            if node.type == 'initializer_list':
+                return self._parse_initializer_list_node(node, type_info)
+            elif node.type in ['number_literal', 'hex_literal', 'octal_literal', 'binary_literal']:
+                return self._parse_number_literal_node(node)
+            elif node.type == 'string_literal':
+                return self._parse_string_literal_node(node)
+            elif node.type == 'char_literal':
+                return self._parse_char_literal_node(node)
+            elif node.type == 'identifier':
+                return self._parse_identifier_node(node)
+            elif node.type == 'assignment_expression':
+                return self._parse_assignment_expression_node(node)
+            elif node.type in ['true', 'false']:
+                return node.type == 'true'
+            elif node.type in ['null', 'NULL']:
+                return None
             else:
-                # 动态大小
-                array_sizes.append("dynamic")
-        
-        logger.debug(f"Array declaration analysis: sizes: {array_sizes}, name: {name}")
-        return array_sizes, name 
+                # 对于其他类型，尝试解析为表达式
+                return self._parse_expression_node(node)
+                
+        except Exception as e:
+            logger.error(f"Failed to parse value from node {node.type}: {str(e)}")
+            return None
+    
+    def _parse_initializer_list_node(self, node: Node, type_info: Dict[str, Any]) -> Any:
+        """解析初始化列表节点 - 按照类型信息解析初始化器列表节点"""
+        try:
+            logger.debug(f"Parsing initializer list for type: {type_info['type']}")
             
-    def _parse_current_file_types(self, ast: Dict[str, Any]) -> None:
-        """解析当前文件中的类型定义"""
-        logger.info("解析当前文件的类型定义")
+            # 判断类型并选择相应的解析方法
+            if type_info.get('array_size'):
+                # 数组类型 - 递归解析每个子节点
+                # 获取数组维度信息
+                array_dimensions = type_info['array_size']
+                
+                logger.debug(f"Array dimensions: {array_dimensions}")
+                
+                if array_dimensions:
+                    result = []
+                    type_info_child = copy.deepcopy(type_info)
+                    type_info_child['array_size'].pop(0)
+                    for child in node.children:
+                        if child.type == 'initializer_list':
+                            child_value = self._parse_initializer_list_node(child, type_info_child)
+                            result.append(child_value)
+                else:
+                    result = self._parse_initializer_typed_node(node, type_info)
+            else:
+                result = self._parse_initializer_typed_node(node, type_info)
+
+            return result
+                
+        except Exception as e:
+            logger.exception(f"Failed to parse initializer list: {e}")
+            return None
+
+    def _parse_initializer_typed_node(self, node: Node, type_info: Dict[str, Any]) -> List[Any]:
+        """按照类型信息解析初始化器列表节点"""
+        result = []
+        logger.debug(f"Parsing initializer list for type: {type_info.get('type', 'unknown')}")
         
-        # 使用CTypeParser解析当前文件的类型定义
-        current_types = self.type_parser.parse_declarations(ast)
+        # 检查类型信息
+        is_struct = type_info.get('is_struct', False)
+        is_union = type_info.get('is_union', False)
         
-        # 更新类型管理器
-        self.data_manager.type_manager.update_type_info(current_types)
+        # 获取字段信息
+        fields = []
+        if type_info.get('info') and type_info['info'].get('fields'):
+            fields = type_info['info']['fields']
+        elif type_info.get('nested_fields'):
+            fields = type_info['nested_fields']
         
-        logger.debug("当前文件类型解析完成:")
-        debug_info = self.data_manager.get_type_info()
-        logger.debug(f"- 类型定义(typedef): {len(debug_info['current']['typedef_types'])} 个")
-        logger.debug(f"- 结构体(struct): {len(debug_info['current']['struct_info'])} 个")
-        logger.debug(f"- 联合体(union): {len(debug_info['current']['union_info'])} 个")
-        logger.debug(f"- 枚举(enum): {len(debug_info['current']['enum_types'])} 个") 
-            
-    def _collect_variable_definitions(self, ast: Dict[str, Any]) -> None:
-        """收集所有变量定义"""
-        for decl in ast.get('declarations', []):
-            if decl.get('type') == 'declaration':
-                var_info = self._process_declaration(decl)
-                if var_info and var_info.get('name'):
-                    self.data_manager.add_variable(var_info)
-                    logger.debug(f"Collected variable definition: {var_info['name']}") 
-            
-    def _categorize_variable(self, var_info: Dict[str, Any]) -> None:
-        """将变量分类到相应的类别
-        
-        Args:
-            var_info: 变量信息
-        """
-        logger.debug(f"\nCategorizing variable: {var_info.get('name')}")
-        logger.debug(f"Variable data: {var_info}")
-        
-        # 首先检查是否是指针
-        if var_info.get('is_pointer') or self.data_manager.type_manager.is_pointer_type(var_info['type']):
-            logger.debug(f"Categorized as pointer variable: {var_info.get('name')}")
-            self.data_manager.add_variable(var_info, 'pointer_vars')
-            return
-        
-        # 然后检查是否是数组
-        if var_info.get('array_size'):
-            logger.debug(f"Categorized as array variable: {var_info.get('name')}")
-            self.data_manager.add_variable(var_info, 'array_vars')
-            return
-        
-        # 检查是否是结构体类型
-        if self.data_manager.type_manager.is_struct_type(var_info['type']):
-            logger.debug(f"Categorized as struct variable: {var_info.get('name')}")
-            self.data_manager.add_variable(var_info, 'struct_vars')
+        if is_struct and fields:
+            # 结构体类型 
+            struct_result = self._parse_struct_initializer_node(node, type_info)
+            result.append(struct_result)
+        elif is_union and fields:
+            # 共用体类型 
+            union_result = self._parse_union_initializer_node(node, type_info)
+            result.append(union_result)
         else:
-            logger.debug(f"Categorized as basic variable: {var_info.get('name')}")
-            self.data_manager.add_variable(var_info, 'variables') 
+            # 基本类型或数组类型
+            for child in node.children:
+                if child.type == 'initializer_list':
+                    # 嵌套初始化列表
+                    nested_value = self._parse_initializer_list_node(child, type_info)
+                    result.append(nested_value)
+                elif self._is_value_node(child):
+                    # 单个值
+                    result = self._parse_value_from_node(child, type_info)
+        
+        logger.debug(f"Parsed typed initializer result {result}")
+        return result
+    
+    def _wrap_value_as_struct(self, value: Any, struct_type: str) -> Dict[str, Any]:
+        """将单个值包装成结构体格式"""
+        try:
+            if not self.type_manager:
+                return {"value": value}
+            
+            struct_info = self.type_manager.get_type_info(struct_type)
+            if not struct_info or 'fields' not in struct_info:
+                return {"value": value}
+            
+            fields = struct_info['fields']
+            if fields:
+                field_name = fields[0]['name']
+                return {field_name: value}
+            else:
+                return {"value": value}
+                
+        except Exception as e:
+            logger.warning(f"Failed to wrap value as struct {struct_type}: {e}")
+            return {"value": value}
+
+    def _parse_struct_with_fields(self, node: Node, fields: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """使用字段信息解析结构体"""
+        result = {}
+        field_index = 0
+        
+        for child in node.children:
+            if child.type == 'initializer_pair':
+                # 指定字段初始化 {.field = value}
+                field_name, field_value = self._parse_designated_initializer(child)
+                if field_name and field_value is not None:
+                    result[field_name] = field_value
+            elif child.type == 'initializer_list':
+                # 嵌套结构体或数组
+                if field_index < len(fields):
+                    field = fields[field_index]
+                    field_value = self._parse_initializer_list_node(child, field)
+                    result[field['name']] = field_value
+                    field_index += 1
+            elif self._is_value_node(child):
+                # 位置初始化
+                if field_index < len(fields):
+                    field = fields[field_index]
+                    field_value = self._parse_value_from_node(child, field)
+                    if field_value is not None:
+                        result[field['name']] = field_value
+                    field_index += 1
+        
+        return result
+    
+    def _parse_union_with_fields(self, node: Node, fields: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """使用字段信息解析联合体"""
+        result = {}
+        
+        for child in node.children:
+            if child.type == 'initializer_pair':
+                # 指定成员初始化 {.member = value}
+                field_name, field_value = self._parse_designated_initializer(child)
+                if field_name and field_value is not None:
+                    result[field_name] = field_value
+                    break  # 联合体只初始化一个成员
+            elif self._is_value_node(child):
+                # 默认初始化第一个成员
+                if fields:
+                    field = fields[0]
+                    field_value = self._parse_value_from_node(child, field)
+                    if field_value is not None:
+                        result[field['name']] = field_value
+                break
+            else:
+                logger.debug(f"Ignoring non-value node: {child.type}")
+        
+        return result
+    
+    def _parse_designated_initializer(self, node: Node) -> Tuple[Optional[Union[str, int]], Any]:
+        """解析指定初始化器节点 {.field = value} 或 {[index] = value}"""
+        field_name = None
+        field_value = None
+        
+        for child in node.children:
+            if child.type == 'field_designator':
+                # 获取字段名 {.field = value}
+                for designator_child in child.children:
+                    if designator_child.type == 'field_identifier':
+                        field_name = self.tree_sitter.get_node_text(designator_child)
+                        break
+            elif child.type == 'subscript_designator':
+                # 获取数组索引 {[index] = value}
+                for designator_child in child.children:
+                    if designator_child.type in ['number_literal', 'identifier']:
+                        index_text = self.tree_sitter.get_node_text(designator_child)
+                        try:
+                            field_name = int(index_text)
+                        except ValueError:
+                            field_name = index_text
+                        break
+            elif child.type not in ['.', '=', ',', '[', ']']:
+                # 获取字段值
+                field_value = self._parse_value_from_node(child, 'auto')
+        
+        return field_name, field_value
+    
+    def _parse_struct_initializer_node(self, node: Node, type_info: Dict[str, Any]) -> Dict[str, Any]:
+        """解析结构体初始化器节点"""
+        struct_type = type_info.get('type', 'unknown')
+        logger.debug(f"Parsing struct initializer for type: {struct_type}")
+        
+        # 获取字段信息
+        fields = []
+        if type_info.get('info') and type_info['info'].get('fields'):
+            fields = type_info['info']['fields']
+        elif type_info.get('nested_fields'):
+            fields = type_info['nested_fields']
+        
+        if not fields:
+            raise ValueError(f"No fields found for struct initializer: {struct_type}")
+        
+        return self._parse_struct_with_fields(node, fields)
+    
+    def _parse_union_initializer_node(self, node: Node, union_type: str) -> Dict[str, Any]:
+        """解析共用体初始化器节点"""
+        logger.debug(f"Parsing union initializer for type: {union_type}")
+        
+        if not self.type_manager:
+            raise ValueError(f"No type manager available for union: {union_type}")
+        
+        union_info = self.type_manager.get_type_info(union_type)
+        if not union_info or 'fields' not in union_info:
+            raise ValueError(f"No fields found for union initializer: {union_type}")
+        
+        return self._parse_union_with_fields(node, union_info['fields'])
+    
+    def _ensure_correct_value_format(self, value: Any, field_name: str, field_type: str) -> Any:
+        """确保值是正确的格式（结构体为dict，数组为list）"""
+        try:
+            if value is None:
+                return value
+            
+            # 检查是否为数组类型
+            if '[' in field_type and ']' in field_type:
+                if not isinstance(value, list):
+                    return [value] if value is not None else []
+                return value
+            
+            # 检查是否为结构体类型
+            elif self.type_manager and self.type_manager.is_struct_type(field_type):
+                if not isinstance(value, dict):
+                    return self._wrap_value_as_struct(value, field_type)
+                return value
+            
+            # 检查是否为联合体类型
+            elif self.type_manager and self.type_manager.is_union_type(field_type):
+                if not isinstance(value, dict):
+                    return self._wrap_value_as_struct(value, field_type)
+                return value
+            
+            # 基本类型直接返回
+            return value
+            
+        except Exception as e:
+            logger.warning(f"Failed to ensure correct format for {field_name}: {e}")
+            return value
+    
+    def _parse_literal_or_identifier_node(self, node: Node, fallback_handler=None) -> Any:
+        """统一解析字面量和标识符节点 - 使用 ExpressionParser"""
+        text = self.tree_sitter.get_node_text(node)
+        
+        try:
+            # 统一使用 ExpressionParser 处理所有类型
+            value, _ = ExpressionParser.parse(
+                text,
+                self.type_manager.get_enum_values() if self.type_manager else {},
+                self.type_manager.get_macro_definition() if self.type_manager else {}
+            )
+            return value
+        except Exception as e:
+            # 如果 ExpressionParser 失败，使用后备处理器
+            if fallback_handler:
+                return fallback_handler(text)
+            else:
+                logger.debug(f"Failed to parse {node.type} '{text}': {e}")
+                return text
+    
+    def _parse_number_literal_node(self, node: Node) -> Union[int, float]:
+        """解析数字字面量节点"""
+        return self._parse_literal_or_identifier_node(node, lambda text: 0)
+    
+    def _parse_string_literal_node(self, node: Node) -> str:
+        """解析字符串字面量节点"""
+        return self._parse_literal_or_identifier_node(node, lambda text: text.strip('"'))
+    
+    def _parse_char_literal_node(self, node: Node) -> str:
+        """解析字符字面量节点"""
+        return self._parse_literal_or_identifier_node(node, lambda text: text.strip("'"))
+    
+    def _parse_identifier_node(self, node: Node) -> Any:
+        """解析标识符节点（可能是枚举值或宏）"""
+        return self._parse_literal_or_identifier_node(node)
+    
+    def _parse_assignment_expression_node(self, node: Node) -> Any:
+        """解析赋值表达式节点"""
+        # 获取右侧的值
+        value_node = node.child_by_field_name('right')
+        if value_node:
+            return self._parse_value_from_node(value_node, 'auto')
+        return None
+    
+    def _parse_expression_node(self, node: Node) -> Any:
+        """解析表达式节点"""
+        # 复用统一的解析方法
+        return self._parse_literal_or_identifier_node(node)
+    
+    def _is_value_node(self, node: Node) -> bool:
+        """判断节点是否为值节点"""
+        return node.type in [
+            'number_literal', 'hex_literal', 'octal_literal', 'binary_literal',
+            'string_literal', 'char_literal', 'identifier', 'true', 'false',
+            'null', 'NULL', 'assignment_expression', 'binary_expression',
+            'unary_expression', 'call_expression', 'parenthesized_expression',
+            'conditional_expression', 'cast_expression', 'field_expression',
+            'subscript_expression', 'pointer_expression', 'compound_literal_expression'
+        ]
+    
+    def _infer_dynamic_array_sizes(self, variable_info: Dict[str, Any], parsed_value: Any) -> None:
+        """从初始化器推断动态数组的维度"""
+        try:
+            if not isinstance(parsed_value, list) or not variable_info.get('array_size'):
+                return
+            
+            array_sizes = variable_info['array_size']
+            current_data = parsed_value
+            
+            logger.debug(f"Inferring array sizes for {variable_info['name']}, current sizes: {array_sizes}, data length: {len(current_data)}")
+            
+            # 遍历每个维度，推断动态大小
+            for i, dim_size in enumerate(array_sizes):
+                if dim_size == 'dynamic' and isinstance(current_data, list):
+                    inferred_size = len(current_data)
+                    array_sizes[i] = inferred_size
+                    logger.debug(f"Inferred dimension {i} size: {inferred_size}")
+                    
+                    # 移动到下一层数据（如果存在嵌套数组）
+                    if current_data and isinstance(current_data[0], list):
+                        current_data = current_data[0]
+                    else:
+                        break
+                elif dim_size == 'dynamic':
+                    # 如果不是列表，说明是单个元素，推断为1
+                    array_sizes[i] = 1
+                    logger.debug(f"Inferred dimension {i} size: 1 (single element)")
+                    break
+            
+            logger.debug(f"Final array sizes for {variable_info['name']}: {array_sizes}")
+            
+        except Exception as e:
+            logger.warning(f"Failed to infer array dimensions for {variable_info['name']}: {e}")
+    
+    def _log_and_store_variable(self, variable_info: Dict[str, Any]) -> None:
+        """记录和存储变量信息"""
+        logger.info(f"Parsed variable: {variable_info['name']}, "
+                    f"Type: {variable_info.get('type')}, "
+                    f"Value: {variable_info['initial_value']}")
+        
+        if variable_info['parsed_value'] is not None:
+            logger.debug(f"Structured data: {json.dumps(variable_info['parsed_value'], indent=2, default=str)}")
+        
+        # 创建一个副本用于存储，移除不可序列化的 AST 节点
+        storable_info = variable_info.copy()
+        if 'initializer_node' in storable_info:
+            del storable_info['initializer_node']
+        
+        self.data_manager.add_variable(storable_info)
+    
+    def _get_node_location(self, node: Node) -> Dict[str, Any]:
+        """获取节点位置信息"""
+        line, col = node.start_point
+        return {
+            'file': self.current_file,
+            'line': line + 1,
+            'column': col
+        }
+    

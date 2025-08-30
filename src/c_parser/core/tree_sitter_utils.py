@@ -59,84 +59,116 @@ class TreeSitterUtils:
             raise
 
     @staticmethod
-    def parse_source(source: str) -> Node:
-        """解析源代码字符串
+    def parse(source: Union[str, Path]) -> Node:
+        """解析源代码或源文件（自适应）
         
         Args:
-            source: 源代码字符串
+            source: 源代码字符串或文件路径
             
         Returns:
             Node: AST根节点
         """
         try:
+            # 检查是否为文件路径
+            if isinstance(source, (str, Path)):
+                # 尝试判断是否为文件路径
+                if isinstance(source, Path) or (isinstance(source, str) and TreeSitterUtils._looks_like_file_path(source)):
+                    # 作为文件路径处理
+                    if isinstance(source, str):
+                        source = Path(source)
+                    
+                    # 读取文件内容
+                    source_text = source.read_text(encoding='utf8', errors='ignore')
+                    logger.debug(f"Parsing file: {source}")
+                else:
+                    # 作为源代码字符串处理
+                    source_text = source
+                    logger.debug("Parsing source code string")
+            else:
+                raise ValueError(f"Unsupported source type: {type(source)}")
+            
+            # 添加调试信息
+            logger.debug(f"Source text length: {len(source_text)}")
+            logger.debug(f"Source text preview: {source_text[:200]}...")
+            
             # 将源码转换为bytes
-            source_bytes = bytes(source, 'utf8')
+            source_bytes = bytes(source_text, 'utf8')
             # 解析生成语法树
             tree = TreeSitterUtils._parser.parse(source_bytes)
-            return tree.root_node
+            return tree
+            
         except Exception as e:
-            logger.error(f"Failed to parse source: {e}")
+            logger.exception(f"Failed to parse source: {e}")
             raise
-
+    
     @staticmethod
-    def parse_file(file_path: Union[str, Path]) -> Node:
-        """解析源文件
+    def parse_source_code(source_text: str) -> Node:
+        """直接解析源代码字符串
         
         Args:
-            file_path: 源文件路径
+            source_text: 源代码字符串
             
         Returns:
             Node: AST根节点
         """
         try:
-            if isinstance(file_path, str):
-                file_path = Path(file_path)
-                
-            # 读取文件内容
-            source = file_path.read_text(encoding='utf8', errors='ignore')
-            return TreeSitterUtils.parse_source(source)
+            # 添加调试信息
+            logger.debug(f"Source text length: {len(source_text)}")
+            logger.debug(f"Source text preview: {source_text[:200]}...")
+            
+            # 将源码转换为bytes
+            source_bytes = bytes(source_text, 'utf8')
+            # 解析生成语法树
+            tree = TreeSitterUtils._parser.parse(source_bytes)
+            return tree
+            
         except Exception as e:
-            logger.error(f"Failed to parse file {file_path}: {e}")
+            logger.exception(f"Failed to parse source code: {e}")
             raise
 
     @staticmethod
-    def parse_type_string(type_str: str) -> Optional[Node]:
-        """解析类型声明字符串
+    def _looks_like_file_path(source: str) -> bool:
+        """判断字符串是否看起来像文件路径
         
         Args:
-            type_str: 类型声明字符串
+            source: 待检查的字符串
             
         Returns:
-            Optional[Node]: 类型节点,解析失败返回None
+            bool: 如果看起来像文件路径返回True，否则返回False
         """
-        try:
-            # 包装成完整的声明
-            source = f"typedef {type_str} test_t;"
-            root = TreeSitterUtils.parse_source(source)
-            
-            # 从typedef中提取类型节点
-            for child in root.children:
-                if child.type == 'type_definition':
-                    # 遍历所有子节点查找类型
-                    for node in child.children:
-                        if node.type in [
-                            'primitive_type',
-                            'type_identifier', 
-                            'pointer_declarator',
-                            'array_declarator',
-                            'function_declarator',
-                            'struct_specifier',
-                            'union_specifier',
-                            'enum_specifier'
-                        ]:
-                            return node
-            return None
-            
-        except Exception as e:
-            logger.error(f"Failed to parse type string: {type_str}")
-            logger.error(f"Error: {e}")
-            return None
-
+        # 快速检查：如果包含C语言关键字或语法，肯定不是文件路径
+        c_keywords = ['int', 'char', 'float', 'double', 'struct', 'union', 'enum', 'typedef', 
+                     'if', 'else', 'for', 'while', 'return', '#include', '{', '}', ';']
+        if any(keyword in source for keyword in c_keywords):
+            return False
+        
+        # 如果字符串很长（超过256字符），很可能不是文件路径
+        if len(source) > 256:
+            return False
+        
+        # 如果包含换行符，肯定不是文件路径
+        if '\n' in source or '\r' in source:
+            return False
+        
+        # 检查是否包含常见的C/C++文件扩展名
+        if '.' in source and source.count('.') <= 3:  # 避免误判浮点数
+            extensions = ['.c', '.h', '.cpp', '.hpp', '.cc', '.cxx']
+            if any(source.lower().endswith(ext) for ext in extensions):
+                return True
+        
+        # 检查是否包含路径分隔符（但不包含其他非路径字符）
+        if ('/' in source or '\\' in source) and not any(c in source for c in ['=', '(', ')', '{', '}', ';']):
+            return True
+        
+        # 检查是否存在作为文件（只对短字符串进行文件系统检查）
+        if len(source) < 100:
+            try:
+                path = Path(source)
+                return path.exists() and path.is_file()
+            except:
+                return False
+        
+        return False
     @staticmethod
     def get_node_text(node: Node) -> str:
         """获取节点文本

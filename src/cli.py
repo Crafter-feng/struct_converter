@@ -152,70 +152,6 @@ def init_config(config_file: str, force: bool):
         logger.error(f"Failed to create config file: {e}")
         raise click.ClickException(str(e))
 
-@cli.command()
-@click.argument('config_file', type=click.Path())
-@click.option('--struct', '-s', multiple=True, help='要加密的结构体字段 (struct:field)')
-@click.option('--exclude', '-e', multiple=True, help='要排除的结构体字段 (struct:field)')
-@click.option('--encrypt-all/--no-encrypt-all', default=False, help='加密所有字段')
-@click.option('--salt', help='加密盐值')
-@click.option('--force/--no-force', default=False, help='强制覆盖已存在的配置文件')
-def init_encrypt_config(config_file: str,
-                       struct: List[str],
-                       exclude: List[str],
-                       encrypt_all: bool,
-                       salt: Optional[str],
-                       force: bool):
-    """初始化加密配置文件
-    
-    创建一个包含字段加密配置的配置文件。
-    可以指定需要加密的字段和排除的字段。
-    
-    示例：
-    \b
-    # 加密特定字段
-    c-converter init-encrypt-config encrypt.json -s User:password -s User:token
-    
-    \b
-    # 加密所有字段，但排除某些字段
-    c-converter init-encrypt-config encrypt.json --encrypt-all -e User:name
-    """
-    try:
-        config_path = Path(config_file)
-        if config_path.exists() and not force:
-            raise click.ClickException(
-                f"Config file {config_file} already exists. Use --force to overwrite."
-            )
-            
-        # 解析结构体字段
-        encrypted_fields = {}
-        for s in struct:
-            struct_name, field_name = s.split(':')
-            if struct_name not in encrypted_fields:
-                encrypted_fields[struct_name] = []
-            encrypted_fields[struct_name].append(field_name)
-            
-        # 解析排除字段
-        excluded_fields = {}
-        for e in exclude:
-            struct_name, field_name = e.split(':')
-            if struct_name not in excluded_fields:
-                excluded_fields[struct_name] = []
-            excluded_fields[struct_name].append(field_name)
-            
-        config = EncryptionConfig(
-            enable=True,
-            salt=salt or "c_converter",
-            encrypt_all=encrypt_all,
-            encrypted_fields=encrypted_fields,
-            excluded_fields=excluded_fields
-        )
-        
-        config.save(config_path)
-        logger.info(f"Created encryption config file: {config_file}")
-        
-    except Exception as e:
-        logger.error(f"Failed to create encryption config: {e}")
-        raise click.ClickException(str(e))
 
 @cli.command()
 @click.argument('header_file', type=click.Path(exists=True), required=False)
@@ -250,14 +186,17 @@ def parse(header_file):
 def analyze(source_file, header_file, output, format):
     """解析C源文件中的变量定义"""
     try:
-        parser = CTypeParser()
+        with open(Path("test_structs.json"), "r") as f:
+            type_info = json.load(f)
+        type_manager = TypeManager(type_info)      
+        parser = CDataParser(type_manager)
         
         # 如果提供了头文件，先解析头文件
         if header_file:
-            parser.parse_declarations(header_file)
+            parser.type_parser.parse_declarations(header_file)
         
         # 解析源文件
-        output_data = parser.parse_declarations(source_file)
+        output_data = parser.parse_file(Path(source_file))
         
         if not output_data:
             raise click.ClickException("解析失败")
