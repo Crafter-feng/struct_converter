@@ -489,39 +489,86 @@ class CDataParser:
         
         try:
             initializer_node = variable_info['initializer_node']
-            target_type = variable_info.get('typeinfo')
+            # 根据节点类型进行解析
+            if initializer_node.type == 'initializer_list':
+                # 初始化列表：执行两步解析
+                parsed_value = self._parse_initializer_direct(initializer_node, variable_info)
+            else:
+                # 其他类型：直接解析
+                parsed_value = self._parse_value_from_node(initializer_node)
             
-            # 基于AST节点类型选择解析方法
-            parsed_value = self._parse_value_from_node(initializer_node, target_type)
             variable_info['parsed_value'] = parsed_value
-            
-            # 如果是动态数组，尝试从初始化器推断维度
-            if variable_info.get('array_size'):
-                self._infer_dynamic_array_sizes(variable_info, parsed_value)
                 
         except Exception as e:
-            logger.warning(f"Failed to parse initialization value for {variable_info['name']}: {e}")
+            logger.exception(f"Failed to parse initialization value for {variable_info['name']}: {e}")
             variable_info['parsed_value'] = None
     
-    def _parse_value_from_node(self, node: Node, type_info: Dict[str, Any]) -> Any:
+    def _parse_initializer_direct(self, node: Node, variable_info: Dict[str, Any]) -> Any:
+        """直接解析初始化器：两步解析法"""
+
+        if variable_info['name'] == "test_data_values":
+            logger.info("")
+
+        # 第一步：按C语言语法解析原始数据
+        raw_data = self._parse_raw_initializer(node)
+
+        del variable_info['initializer_node']
+
+        # 第二步：如果是动态数组，尝试从初始化器推断维度
+        if variable_info.get('array_size'):
+            self._infer_dynamic_array_sizes(raw_data, variable_info)
+
+        # 第三步：根据类型信息进行填充
+        parsed_value = self._wapper_raw_data(raw_data, variable_info)
+        
+        return parsed_value
+        
+    def _wapper_raw_data(self, raw_data: Union[List[Any], Any], variable_info: Dict[str, Any]) -> List[Any]:
+        """将原始数据转换为JSON格式"""
+
+        array_size = variable_info.get('array_size', [])
+        is_struct = variable_info['typeinfo'].get('is_struct', False)
+        is_union = variable_info['typeinfo'].get('is_union', False)
+        is_pointer = variable_info['typeinfo'].get('is_pointer', False)
+
+        if array_size:
+            # 变量定义为数组：使用数组展开函数
+            child_size = array_size[0]
+            variable_info_child = copy.deepcopy(variable_info)
+            variable_info_child['array_size'].pop(0)   
+
+            expanded_data = []
+            raw_data_length = len(raw_data)
+            for i in range(min(child_size, raw_data_length)):
+                if (is_struct or is_union) and not is_pointer:
+                    data = self._wapper_raw_data(raw_data[i], variable_info_child)
+                else:
+                    data = raw_data[i]
+                expanded_data.append(data) 
+            return expanded_data
+        
+        elif (is_struct or is_union) and not is_pointer:
+            return self._fill_field_data(raw_data, variable_info)
+        else:
+            return raw_data
+
+    def _parse_value_from_node(self, node: Node) -> Any:
         """从AST节点解析值 - 原ValueParser的核心功能"""
         try:
             if not node:
                 return None
                 
-            logger.debug(f"Parsing value from node type: {node.type}, target type: {type_info['type']}")
+            logger.debug(f"Parsing value from node type: {node.type}")
             
             # 根据节点类型进行解析
-            if node.type == 'initializer_list':
-                return self._parse_initializer_list_node(node, type_info)
-            elif node.type in ['number_literal', 'hex_literal', 'octal_literal', 'binary_literal']:
-                return self._parse_number_literal_node(node)
+            if node.type in ['number_literal', 'hex_literal', 'octal_literal', 'binary_literal']:
+                return self._parse_literal_or_identifier_node(node, lambda text: 0)
             elif node.type == 'string_literal':
-                return self._parse_string_literal_node(node)
+                return self._parse_literal_or_identifier_node(node, lambda text: text.strip('"'))
             elif node.type == 'char_literal':
-                return self._parse_char_literal_node(node)
+                return self._parse_literal_or_identifier_node(node, lambda text: text.strip("'"))
             elif node.type == 'identifier':
-                return self._parse_identifier_node(node)
+                 return self._parse_literal_or_identifier_node(node)
             elif node.type == 'assignment_expression':
                 return self._parse_assignment_expression_node(node)
             elif node.type in ['true', 'false']:
@@ -530,245 +577,80 @@ class CDataParser:
                 return None
             else:
                 # 对于其他类型，尝试解析为表达式
-                return self._parse_expression_node(node)
+                return self._parse_literal_or_identifier_node(node)
                 
         except Exception as e:
-            logger.error(f"Failed to parse value from node {node.type}: {str(e)}")
+            logger.exception(f"Failed to parse value from node {node.type}: {str(e)}")
             return None
     
-    def _parse_initializer_list_node(self, node: Node, type_info: Dict[str, Any]) -> Any:
-        """解析初始化列表节点 - 按照类型信息解析初始化器列表节点"""
-        try:
-            logger.debug(f"Parsing initializer list for type: {type_info['type']}")
-            
-            # 判断类型并选择相应的解析方法
-            if type_info.get('array_size'):
-                # 数组类型 - 递归解析每个子节点
-                # 获取数组维度信息
-                array_dimensions = type_info['array_size']
-                
-                logger.debug(f"Array dimensions: {array_dimensions}")
-                
-                if array_dimensions:
-                    result = []
-                    type_info_child = copy.deepcopy(type_info)
-                    type_info_child['array_size'].pop(0)
-                    for child in node.children:
-                        if child.type == 'initializer_list':
-                            child_value = self._parse_initializer_list_node(child, type_info_child)
-                            result.append(child_value)
-                else:
-                    result = self._parse_initializer_typed_node(node, type_info)
-            else:
-                result = self._parse_initializer_typed_node(node, type_info)
-
-            return result
-                
-        except Exception as e:
-            logger.exception(f"Failed to parse initializer list: {e}")
-            return None
-
-    def _parse_initializer_typed_node(self, node: Node, type_info: Dict[str, Any]) -> List[Any]:
-        """按照类型信息解析初始化器列表节点"""
+    def _parse_raw_initializer(self, node: Node) -> Union[List[Any], Any]:
+        """解析原始初始化器数据（按C语言语法）"""
         result = []
-        logger.debug(f"Parsing initializer list for type: {type_info.get('type', 'unknown')}")
-        
-        # 检查类型信息
-        is_struct = type_info.get('is_struct', False)
-        is_union = type_info.get('is_union', False)
-        
-        # 获取字段信息
-        fields = []
-        if type_info.get('info') and type_info['info'].get('fields'):
-            fields = type_info['info']['fields']
-        elif type_info.get('nested_fields'):
-            fields = type_info['nested_fields']
-        
-        if is_struct and fields:
-            # 结构体类型 
-            struct_result = self._parse_struct_initializer_node(node, type_info)
-            result.append(struct_result)
-        elif is_union and fields:
-            # 共用体类型 
-            union_result = self._parse_union_initializer_node(node, type_info)
-            result.append(union_result)
-        else:
-            # 基本类型或数组类型
-            for child in node.children:
-                if child.type == 'initializer_list':
-                    # 嵌套初始化列表
-                    nested_value = self._parse_initializer_list_node(child, type_info)
-                    result.append(nested_value)
-                elif self._is_value_node(child):
-                    # 单个值
-                    result = self._parse_value_from_node(child, type_info)
-        
-        logger.debug(f"Parsed typed initializer result {result}")
-        return result
-    
-    def _wrap_value_as_struct(self, value: Any, struct_type: str) -> Dict[str, Any]:
-        """将单个值包装成结构体格式"""
-        try:
-            if not self.type_manager:
-                return {"value": value}
-            
-            struct_info = self.type_manager.get_type_info(struct_type)
-            if not struct_info or 'fields' not in struct_info:
-                return {"value": value}
-            
-            fields = struct_info['fields']
-            if fields:
-                field_name = fields[0]['name']
-                return {field_name: value}
-            else:
-                return {"value": value}
-                
-        except Exception as e:
-            logger.warning(f"Failed to wrap value as struct {struct_type}: {e}")
-            return {"value": value}
-
-    def _parse_struct_with_fields(self, node: Node, fields: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """使用字段信息解析结构体"""
-        result = {}
-        field_index = 0
         
         for child in node.children:
             if child.type == 'initializer_pair':
-                # 指定字段初始化 {.field = value}
+                # 指定初始化 {.field = value} - 转换为dict并放入list
                 field_name, field_value = self._parse_designated_initializer(child)
                 if field_name and field_value is not None:
-                    result[field_name] = field_value
+                    result.append({field_name: field_value})
             elif child.type == 'initializer_list':
-                # 嵌套结构体或数组
-                if field_index < len(fields):
-                    field = fields[field_index]
-                    field_value = self._parse_initializer_list_node(child, field)
-                    result[field['name']] = field_value
-                    field_index += 1
+                # 嵌套初始化列表
+                nested_value = self._parse_raw_initializer(child)
+                result.append(nested_value)
+            elif child.type == 'sizeof_expression':
+                result.append(child.text.decode('utf8'))
             elif self._is_value_node(child):
-                # 位置初始化
-                if field_index < len(fields):
-                    field = fields[field_index]
-                    field_value = self._parse_value_from_node(child, field)
-                    if field_value is not None:
-                        result[field['name']] = field_value
-                    field_index += 1
+                # 单个值
+                value = self._parse_value_from_node(child)
+                result.append(value)
         
         return result
     
-    def _parse_union_with_fields(self, node: Node, fields: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """使用字段信息解析联合体"""
+    def _fill_field_data(self, raw_data: List[Any], variable_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """根据结构定义填充数据"""
+        info = variable_info['typeinfo'].get('info')
+        if not info or 'fields' not in info:
+            raise ValueError(f"No  fields found for struct: {variable_info['typeinfo'].get('type', 'unknown')}")
+
+        if info['kind'] == 'union':
+            union_fields = [info['fields'][0]]
+            for i in raw_data:
+                if isinstance(i, dict):
+                    fields_name = list(i.keys())[0]
+                    union_fields = [field for field in info['fields'] if field['name'] == fields_name]
+                    break
+            fields = union_fields
+        else:
+            fields = info['fields']
+            
         result = {}
-        
-        for child in node.children:
-            if child.type == 'initializer_pair':
-                # 指定成员初始化 {.member = value}
-                field_name, field_value = self._parse_designated_initializer(child)
-                if field_name and field_value is not None:
-                    result[field_name] = field_value
-                    break  # 联合体只初始化一个成员
-            elif self._is_value_node(child):
-                # 默认初始化第一个成员
-                if fields:
-                    field = fields[0]
-                    field_value = self._parse_value_from_node(child, field)
-                    if field_value is not None:
-                        result[field['name']] = field_value
-                break
+        for i in range(min(len(fields), len(raw_data))):
+            field = fields[i]
+            field_name = field['name']
+            array_size = field['array_size']
+            field_type_info = self.type_manager.resolve_type(field['type'])
+            is_struct = field_type_info['is_struct']
+            is_union = field_type_info['is_union']
+            is_pointer = field_type_info['is_pointer']
+            field_raw_value = raw_data[i]
+
+            field_variable_info = {
+                'name': field_name, 
+                'type': field['type'], 
+                'array_size': array_size,
+                'typeinfo': field_type_info
+                }
+
+            if array_size and (is_struct or is_union):
+                result[field_name] = self._wapper_raw_data(field_raw_value, field_variable_info)
+            elif (is_struct or is_union) and not is_pointer:
+                result[field_name] = self._fill_field_data(field_raw_value, field_variable_info)
+            elif isinstance(field_raw_value, dict):
+                result.update(field_raw_value)
             else:
-                logger.debug(f"Ignoring non-value node: {child.type}")
-        
+                result[field_name] = field_raw_value
+            
         return result
-    
-    def _parse_designated_initializer(self, node: Node) -> Tuple[Optional[Union[str, int]], Any]:
-        """解析指定初始化器节点 {.field = value} 或 {[index] = value}"""
-        field_name = None
-        field_value = None
-        
-        for child in node.children:
-            if child.type == 'field_designator':
-                # 获取字段名 {.field = value}
-                for designator_child in child.children:
-                    if designator_child.type == 'field_identifier':
-                        field_name = self.tree_sitter.get_node_text(designator_child)
-                        break
-            elif child.type == 'subscript_designator':
-                # 获取数组索引 {[index] = value}
-                for designator_child in child.children:
-                    if designator_child.type in ['number_literal', 'identifier']:
-                        index_text = self.tree_sitter.get_node_text(designator_child)
-                        try:
-                            field_name = int(index_text)
-                        except ValueError:
-                            field_name = index_text
-                        break
-            elif child.type not in ['.', '=', ',', '[', ']']:
-                # 获取字段值
-                field_value = self._parse_value_from_node(child, 'auto')
-        
-        return field_name, field_value
-    
-    def _parse_struct_initializer_node(self, node: Node, type_info: Dict[str, Any]) -> Dict[str, Any]:
-        """解析结构体初始化器节点"""
-        struct_type = type_info.get('type', 'unknown')
-        logger.debug(f"Parsing struct initializer for type: {struct_type}")
-        
-        # 获取字段信息
-        fields = []
-        if type_info.get('info') and type_info['info'].get('fields'):
-            fields = type_info['info']['fields']
-        elif type_info.get('nested_fields'):
-            fields = type_info['nested_fields']
-        
-        if not fields:
-            raise ValueError(f"No fields found for struct initializer: {struct_type}")
-        
-        return self._parse_struct_with_fields(node, fields)
-    
-    def _parse_union_initializer_node(self, node: Node, union_type: str) -> Dict[str, Any]:
-        """解析共用体初始化器节点"""
-        logger.debug(f"Parsing union initializer for type: {union_type}")
-        
-        if not self.type_manager:
-            raise ValueError(f"No type manager available for union: {union_type}")
-        
-        union_info = self.type_manager.get_type_info(union_type)
-        if not union_info or 'fields' not in union_info:
-            raise ValueError(f"No fields found for union initializer: {union_type}")
-        
-        return self._parse_union_with_fields(node, union_info['fields'])
-    
-    def _ensure_correct_value_format(self, value: Any, field_name: str, field_type: str) -> Any:
-        """确保值是正确的格式（结构体为dict，数组为list）"""
-        try:
-            if value is None:
-                return value
-            
-            # 检查是否为数组类型
-            if '[' in field_type and ']' in field_type:
-                if not isinstance(value, list):
-                    return [value] if value is not None else []
-                return value
-            
-            # 检查是否为结构体类型
-            elif self.type_manager and self.type_manager.is_struct_type(field_type):
-                if not isinstance(value, dict):
-                    return self._wrap_value_as_struct(value, field_type)
-                return value
-            
-            # 检查是否为联合体类型
-            elif self.type_manager and self.type_manager.is_union_type(field_type):
-                if not isinstance(value, dict):
-                    return self._wrap_value_as_struct(value, field_type)
-                return value
-            
-            # 基本类型直接返回
-            return value
-            
-        except Exception as e:
-            logger.warning(f"Failed to ensure correct format for {field_name}: {e}")
-            return value
-    
     def _parse_literal_or_identifier_node(self, node: Node, fallback_handler=None) -> Any:
         """统一解析字面量和标识符节点 - 使用 ExpressionParser"""
         text = self.tree_sitter.get_node_text(node)
@@ -789,35 +671,45 @@ class CDataParser:
                 logger.debug(f"Failed to parse {node.type} '{text}': {e}")
                 return text
     
-    def _parse_number_literal_node(self, node: Node) -> Union[int, float]:
-        """解析数字字面量节点"""
-        return self._parse_literal_or_identifier_node(node, lambda text: 0)
-    
-    def _parse_string_literal_node(self, node: Node) -> str:
-        """解析字符串字面量节点"""
-        return self._parse_literal_or_identifier_node(node, lambda text: text.strip('"'))
-    
-    def _parse_char_literal_node(self, node: Node) -> str:
-        """解析字符字面量节点"""
-        return self._parse_literal_or_identifier_node(node, lambda text: text.strip("'"))
-    
-    def _parse_identifier_node(self, node: Node) -> Any:
-        """解析标识符节点（可能是枚举值或宏）"""
-        return self._parse_literal_or_identifier_node(node)
-    
     def _parse_assignment_expression_node(self, node: Node) -> Any:
         """解析赋值表达式节点"""
         # 获取右侧的值
         value_node = node.child_by_field_name('right')
         if value_node:
-            return self._parse_value_from_node(value_node, 'auto')
+            return self._parse_value_from_node(value_node)
         return None
-    
-    def _parse_expression_node(self, node: Node) -> Any:
-        """解析表达式节点"""
-        # 复用统一的解析方法
-        return self._parse_literal_or_identifier_node(node)
-    
+
+    def _parse_designated_initializer(self, node: Node) -> Tuple[Optional[Union[str, int]], Any]:
+            """解析指定初始化器节点 {.field = value} 或 {[index] = value}"""
+            field_name = None
+            field_value = None
+            
+            for child in node.children:
+                if child.type == 'field_designator':
+                    # 获取字段名 {.field = value}
+                    for designator_child in child.children:
+                        if designator_child.type == 'field_identifier':
+                            field_name = self.tree_sitter.get_node_text(designator_child)
+                            break
+                elif child.type == 'subscript_designator':
+                    # 获取数组索引 {[index] = value}
+                    for designator_child in child.children:
+                        if designator_child.type in ['number_literal', 'identifier']:
+                            index_text = self.tree_sitter.get_node_text(designator_child)
+                            try:
+                                field_name = int(index_text)
+                            except ValueError:
+                                field_name = index_text
+                            break
+                elif child.type == 'initializer_list':
+                    field_value = self._parse_raw_initializer(child)
+                elif child.type == 'initializer_pair':
+                    field_value = self._parse_designated_initializer(child)
+                elif self._is_value_node(child):
+                    # 获取字段值
+                    field_value = self._parse_value_from_node(child)
+            
+            return field_name, field_value    
     def _is_value_node(self, node: Node) -> bool:
         """判断节点是否为值节点"""
         return node.type in [
@@ -829,19 +721,21 @@ class CDataParser:
             'subscript_expression', 'pointer_expression', 'compound_literal_expression'
         ]
     
-    def _infer_dynamic_array_sizes(self, variable_info: Dict[str, Any], parsed_value: Any) -> None:
+    def _infer_dynamic_array_sizes(self, parsed_value: Union[List[Any], Any], variable_info: Dict[str, Any]) -> None:
         """从初始化器推断动态数组的维度"""
         try:
             if not isinstance(parsed_value, list) or not variable_info.get('array_size'):
                 return
             
-            array_sizes = variable_info['array_size']
+            array_sizes =  variable_info['array_size']
+            dim_length = len(array_sizes)
             current_data = parsed_value
             
             logger.debug(f"Inferring array sizes for {variable_info['name']}, current sizes: {array_sizes}, data length: {len(current_data)}")
             
             # 遍历每个维度，推断动态大小
-            for i, dim_size in enumerate(array_sizes):
+            for i in range(dim_length):
+                dim_size = array_sizes[i]
                 if dim_size == 'dynamic' and isinstance(current_data, list):
                     inferred_size = len(current_data)
                     array_sizes[i] = inferred_size

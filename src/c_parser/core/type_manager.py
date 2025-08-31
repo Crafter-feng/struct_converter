@@ -99,14 +99,10 @@ class TypeManager:
             self._load_type_info(type_info)
         
         # 更新类型别名映射
-        if type_info and 'typedef_types' in type_info:
-            for typedef in type_info['typedef_types']:
-                if isinstance(typedef, dict) and 'name' in typedef and 'base_type' in typedef:
-                    self.TYPE_ALIASES[typedef['name']] = typedef['base_type']
-        elif type_info and 'types' in type_info:
+        if type_info and 'types' in type_info:
             for type_def in type_info['types']:
-                if isinstance(type_def, dict) and type_def.get('kind') == 'typedef' and 'name' in type_def and 'base_type' in type_def:
-                    self.TYPE_ALIASES[type_def['name']] = type_def['base_type']
+                if isinstance(type_def, dict) and type_def.get('kind') == 'typedef' and 'name' in type_def and 'type' in type_def:
+                    self.TYPE_ALIASES[type_def['name']] = type_def['type']
 
     @property
     def basic_types(self):
@@ -572,8 +568,6 @@ class TypeManager:
         # 检查是否为预定义的类型别名
         if clean_base_type in self.TYPE_ALIASES:
             alias_type = self.TYPE_ALIASES[clean_base_type]
-            if isinstance(alias_type, dict):
-                alias_type = alias_type.get('base_type', '')
             # 对于别名，需要重构完整类型
             return self._reconstruct_type(original_type, clean_base_type, alias_type)
         
@@ -728,11 +722,6 @@ class TypeManager:
         while resolved_type.endswith('*'):
             resolved_type = resolved_type[:-1].strip()
             pointer_level += 1
-        
-        # 检查是否是指针类型定义
-        if self.is_pointer_type(resolved_type):
-            pointer_level += 1
-            resolved_type = resolved_type.rstrip('*')
         
         # 获取基础类型的信息
         type_info.update({

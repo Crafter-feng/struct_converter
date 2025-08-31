@@ -18,7 +18,7 @@
         "initial_value": "{\n    123,                 // id\n    \"Test Complex Data\", // name\n    {10, 20},            // position\n    &test_vectors[0],    // movement\n    test_points,         // targets\n    &test_nodes[0],      // head\n    {                    // matrix\n     {1.0f, 0.0f, 0.0f, 0.0f},\n     {0.0f, 1.0f, 0.0f, 0.0f},\n     {0.0f, 0.0f, 1.0f, 0.0f},\n     {0.0f, 0.0f, 0.0f, 1.0f}},\n    NULL,      // extra_data\n    0xFFFFFFFF // flags\n}",
         "parsed_value": [
           123,
-          "\"Test Complex Data\"",
+          "Test Complex Data",
           [
             10,
             20
@@ -52,6 +52,7 @@
               1.0
             ]
           ],
+          null,
           4294967295
         ],
         "location": {
@@ -209,10 +210,26 @@
             ]
           ],
           [
-            [],
-            [],
-            [],
-            []
+            [
+              {
+                "as_int": 1
+              }
+            ],
+            [
+              {
+                "as_float": 2.0
+              }
+            ],
+            [
+              {
+                "as_int": 3
+              }
+            ],
+            [
+              {
+                "as_float": 4.0
+              }
+            ]
           ],
           [
             1,
@@ -406,15 +423,16 @@
             0.75
           ],
           [
-            "\"localhost\"",
+            "localhost",
             8080,
             5000
           ],
           [
             3,
             1,
-            "\"/var/log/app.log\""
-          ]
+            "/var/log/app.log"
+          ],
+          null
         ],
         "location": {
           "file": "tests\\fixtures\\c_files\\test_data.c",
@@ -858,7 +876,8 @@
         "parsed_value": [
           [
             1,
-            "& test_nodes[1]"
+            "& test_nodes[1]",
+            null
           ],
           [
             2,
@@ -867,6 +886,7 @@
           ],
           [
             3,
+            null,
             "& test_nodes[1]"
           ]
         ],
@@ -971,8 +991,16 @@
         ],
         "initial_value": "{\n    {.as_int = 0x12345678},\n    {.as_float = 3.14159f},\n    {.as_bytes = {{0x12, 0x34}, {0x56, 0x78}}}}",
         "parsed_value": [
-          [],
-          [],
+          [
+            {
+              "as_int": 305419896
+            }
+          ],
+          [
+            {
+              "as_float": 3.14159
+            }
+          ],
           []
         ],
         "location": {
@@ -1068,7 +1096,7 @@
           "dynamic"
         ],
         "initial_value": "\"Hello, World!\"",
-        "parsed_value": "\"Hello, World!\"",
+        "parsed_value": "Hello, World!",
         "location": {
           "file": "tests\\fixtures\\c_files\\test_data.c",
           "line": 120,
@@ -1112,7 +1140,7 @@
           1024
         ],
         "initial_value": "\"Initial content\"",
-        "parsed_value": "\"Initial content\"",
+        "parsed_value": "Initial content",
         "location": {
           "file": "tests\\fixtures\\c_files\\test_data.c",
           "line": 126,

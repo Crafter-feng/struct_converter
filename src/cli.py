@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 from loguru import logger
 from config import GeneratorConfig
-from config import EncryptionConfig
 from c_converter.generators import CGenerator
 from c_converter.generators import PythonGenerator
 from c_parser import TypeManager,CTypeParser,CDataParser
@@ -38,7 +37,6 @@ def cli(log_file: Optional[str], log_level: str):
     if not hasattr(cli, 'config'):
         cli.config = {
             'generator': GeneratorConfig(),
-            'encryption': EncryptionConfig(),
             'type_manager': TypeManager(),
             'parser': None
         }

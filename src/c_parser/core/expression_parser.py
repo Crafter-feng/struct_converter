@@ -17,13 +17,14 @@ class ExpressionParser:
             
         logger.debug(f"=== Parsing Expression ===")
         logger.debug(f"Input expression: {expr}")
-        logger.debug(f"Available enum values: {enum_values}")
-        logger.debug(f"Available macro values: {macro_values}")
+        # logger.debug(f"Available enum values: {enum_values}")
+        # logger.debug(f"Available macro values: {macro_values}")
         
         # 1. 检查字符串字面量
         if expr.startswith(("'", '"')) and expr.endswith(("'", '"')):
             logger.debug(f"Detected string literal: {expr}")
-            return expr, 'string'
+            # 返回去除引号的字符串内容
+            return expr[1:-1], 'string'
         
         # 2. 检查数字字面量
         try:
