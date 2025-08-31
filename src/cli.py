@@ -20,7 +20,7 @@ def cli(log_file: Optional[str], log_level: str):
     """C结构体转换工具
     
     用于将C语言结构体转换为其他语言的数据结构。
-    支持字段加密、类型转换和代码生成。
+    支持类型转换和代码生成。
     """
     # 设置日志配置
     if log_file:
@@ -40,89 +40,6 @@ def cli(log_file: Optional[str], log_level: str):
             'type_manager': TypeManager(),
             'parser': None
         }
-
-@cli.command()
-@click.argument('input_files', nargs=-1, type=click.Path(exists=True))
-@click.option('--output-dir', '-o', type=click.Path(), help='输出目录')
-@click.option('--lang', '-l', 
-              type=click.Choice(['c', 'python']), 
-              default='c', 
-              help='目标语言')
-@click.option('--config', '-c', 
-              type=click.Path(exists=True), 
-              help='配置文件路径')
-@click.option('--encrypt/--no-encrypt', 
-              default=False, 
-              help='启用字段加密')
-@click.option('--encrypt-salt', 
-              help='字段加密盐值')
-@click.option('--encrypt-config', 
-              type=click.Path(exists=True),
-              help='加密配置文件路径')
-def convert(input_files: List[str], 
-           output_dir: Optional[str], 
-           lang: str,
-           config: Optional[str],
-           encrypt: bool,
-           encrypt_salt: Optional[str],
-           encrypt_config: Optional[str]):
-    """转换C头文件到目标语言"""
-    try:
-        # 加载配置
-        if config:
-            cli.config['generator'] = GeneratorConfig.load(config)
-            
-        # 加载加密配置
-        if encrypt_config:
-            cli.config['encryption'] = EncryptionConfig.load(encrypt_config)
-            cli.config['generator'].encryption = cli.config['encryption']
-            
-        # 更新配置
-        if output_dir:
-            cli.config['generator'].output_dir = output_dir
-        if encrypt:
-            cli.config['generator'].enable_field_encryption = True
-        if encrypt_salt:
-            cli.config['generator'].field_encryption_salt = encrypt_salt
-            
-        # 创建生成器
-        if lang == 'c':
-            generator = CGenerator(cli.config['generator'])
-        else:
-            generator = PythonGenerator(cli.config['generator'])
-            
-        # 创建解析器
-        if not cli.config['parser']:
-            cli.config['parser'] = CTypeParser(cli.config['type_manager'])
-            
-        # 处理每个输入文件
-        for input_file in input_files:
-            logger.info(f"Processing {input_file}...")
-            
-            # 解析C代码
-            parse_result = cli.config['parser'].parse_declarations(input_file)
-            
-            # 生成代码
-            module_name = Path(input_file).stem
-            generated = generator.generate({
-                'module_name': module_name,
-                **parse_result
-            })
-            
-            # 保存生成的代码
-            output_path = Path(cli.config['generator'].output_dir)
-            output_path.mkdir(parents=True, exist_ok=True)
-            
-            for ext, content in generated.items():
-                output_file = output_path / f"{module_name}.{ext}"
-                with open(output_file, 'w') as f:
-                    f.write(content)
-                logger.info(f"Generated {output_file}")
-                
-    except Exception as e:
-        logger.error(f"Failed to convert files: {e}")
-        raise click.ClickException(str(e))
-
 @cli.command()
 @click.argument('config_file', type=click.Path())
 @click.option('--force/--no-force', default=False, help='强制覆盖已存在的配置文件')
