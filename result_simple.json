@@ -1,0 +1,596 @@
+{
+  "variables": [
+    {
+      "name": "test_complex_data",
+      "type": "ComplexData",
+      "parsed_value": {
+        "id": 123,
+        "name": "Test Complex Data",
+        "position": {
+          "x": 10,
+          "y": 20
+        },
+        "movement": "& test_vectors[0]",
+        "targets": "test_points",
+        "head": "& test_nodes[0]",
+        "matrix": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "extra_data": null,
+        "flags": 4294967295
+      }
+    },
+    {
+      "name": "test_nested",
+      "type": "NestedStruct",
+      "parsed_value": {
+        "origin": {
+          "x": 0,
+          "y": 0
+        },
+        "vectors": [
+          [
+            {
+              "components": [
+                1.0,
+                2.0,
+                3.0
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                }
+              ],
+              "count": 1
+            },
+            {
+              "components": [
+                4.0,
+                5.0,
+                6.0
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                }
+              ],
+              "count": 1
+            }
+          ],
+          [
+            {
+              "components": [
+                7.0,
+                8.0,
+                9.0
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                }
+              ],
+              "count": 1
+            },
+            {
+              "components": [
+                10.0,
+                11.0,
+                12.0
+              ],
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 0,
+                  "y": 0
+                }
+              ],
+              "count": 1
+            }
+          ]
+        ],
+        "values": [
+          {
+            "as_int": 1
+          },
+          {
+            "as_float": 2.0
+          },
+          {
+            "as_int": 3
+          },
+          {
+            "as_float": 4.0
+          }
+        ],
+        "flags": {
+          "flag1": 1,
+          "flag2": 1,
+          "value": 60,
+          "reserved": 0
+        },
+        "date": {
+          "year": 2024,
+          "month": 3,
+          "day": 20
+        }
+      }
+    },
+    {
+      "name": "test_ring_buffer",
+      "type": "RingBuffer",
+      "parsed_value": {
+        "buffer": "buffer_data",
+        "size": "sizeof(buffer_data)",
+        "read_pos": 0,
+        "write_pos": 5,
+        "status": {
+          "is_full": 0,
+          "is_empty": 0,
+          "reserved": 0
+        }
+      }
+    },
+    {
+      "name": "test_string_view",
+      "type": "StringView",
+      "parsed_value": {
+        "data": "test_str",
+        "length": "sizeof(test_str) - 1"
+      }
+    },
+    {
+      "name": "test_string_builder",
+      "type": "StringBuilder",
+      "parsed_value": {
+        "buffer": "string_buffer",
+        "capacity": "sizeof(string_buffer)",
+        "length": 15
+      }
+    },
+    {
+      "name": "test_config",
+      "type": "Config",
+      "parsed_value": {
+        "limits": {
+          "max_items": 1000,
+          "max_depth": 10,
+          "threshold": 0.75
+        },
+        "network": {
+          "host": "localhost",
+          "port": 8080,
+          "timeout_ms": 5000
+        },
+        "logging": {
+          "level": 3,
+          "enabled": 1,
+          "file": "/var/log/app.log"
+        },
+        "user_context": null
+      }
+    },
+    {
+      "name": "test_points",
+      "type": "Point",
+      "array_size": [
+        4
+      ],
+      "parsed_value": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 100,
+          "y": 200
+        },
+        {
+          "x": -1,
+          "y": -1
+        },
+        {
+          "x": "INT32_MAX",
+          "y": "INT32_MIN"
+        }
+      ]
+    },
+    {
+      "name": "test_dynamic_points",
+      "type": "Point",
+      "array_size": [
+        4,
+        5
+      ],
+      "parsed_value": [
+        [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 1,
+            "y": 1
+          },
+          {
+            "x": 2,
+            "y": 2
+          },
+          {
+            "x": 3,
+            "y": 3
+          },
+          {
+            "x": 4,
+            "y": 4
+          }
+        ],
+        [
+          {
+            "x": 1,
+            "y": 1
+          },
+          {
+            "x": 2,
+            "y": 2
+          },
+          {
+            "x": 3,
+            "y": 3
+          },
+          {
+            "x": 4,
+            "y": 4
+          },
+          {
+            "x": 5,
+            "y": 5
+          }
+        ],
+        [
+          {
+            "x": 2,
+            "y": 2
+          },
+          {
+            "x": 3,
+            "y": 3
+          },
+          {
+            "x": 4,
+            "y": 4
+          },
+          {
+            "x": 5,
+            "y": 5
+          },
+          {
+            "x": 6,
+            "y": 6
+          }
+        ],
+        [
+          {
+            "x": 3,
+            "y": 3
+          },
+          {
+            "x": 4,
+            "y": 4
+          },
+          {
+            "x": 5,
+            "y": 5
+          },
+          {
+            "x": 6,
+            "y": 6
+          },
+          {
+            "x": 7,
+            "y": 7
+          }
+        ]
+      ]
+    },
+    {
+      "name": "test_vectors",
+      "type": "Vector",
+      "array_size": [
+        2
+      ],
+      "parsed_value": [
+        {
+          "components": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "points": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "count": 0
+        },
+        {
+          "components": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "points": [
+            {
+              "x": 1,
+              "y": 1
+            },
+            {
+              "x": 2,
+              "y": 2
+            },
+            {
+              "x": 3,
+              "y": 3
+            },
+            {
+              "x": 4,
+              "y": 4
+            }
+          ],
+          "count": 4
+        }
+      ]
+    },
+    {
+      "name": "test_div2_vectors",
+      "type": "Vector",
+      "array_size": [
+        2,
+        2
+      ],
+      "parsed_value": [
+        [
+          {
+            "components": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "count": 0
+          },
+          {
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "points": [
+              {
+                "x": 1,
+                "y": 1
+              },
+              {
+                "x": 2,
+                "y": 2
+              },
+              {
+                "x": 3,
+                "y": 3
+              },
+              {
+                "x": 4,
+                "y": 4
+              }
+            ],
+            "count": 4
+          }
+        ]
+      ]
+    },
+    {
+      "name": "test_nodes",
+      "type": "Node",
+      "array_size": [
+        3
+      ],
+      "parsed_value": [
+        {
+          "value": 1,
+          "next": "& test_nodes[1]",
+          "prev": null
+        },
+        {
+          "value": 2,
+          "next": "& test_nodes[2]",
+          "prev": "& test_nodes[0]"
+        },
+        {
+          "value": 3,
+          "next": null,
+          "prev": "& test_nodes[1]"
+        }
+      ]
+    },
+    {
+      "name": "test_bit_fields",
+      "type": "BitFields",
+      "array_size": [
+        2
+      ],
+      "parsed_value": [
+        {
+          "flag1": 1,
+          "flag2": 0,
+          "value": 63,
+          "reserved": 0
+        },
+        {
+          "flag1": 0,
+          "flag2": 1,
+          "value": 0,
+          "reserved": 16777215
+        }
+      ]
+    },
+    {
+      "name": "test_data_values",
+      "type": "DataValue",
+      "array_size": [
+        3
+      ],
+      "parsed_value": [
+        {
+          "as_int": 305419896
+        },
+        {
+          "as_float": 3.14159
+        },
+        {
+          "as_bytes": [
+            [
+              18,
+              52
+            ],
+            [
+              86,
+              120
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "buffer_data",
+      "type": "u8",
+      "array_size": [
+        256
+      ],
+      "parsed_value": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "name": "test_str",
+      "type": "char",
+      "array_size": [
+        "dynamic"
+      ],
+      "parsed_value": "Hello, World!"
+    },
+    {
+      "name": "string_buffer",
+      "type": "char",
+      "array_size": [
+        1024
+      ],
+      "parsed_value": "Initial content"
+    }
+  ]
+}

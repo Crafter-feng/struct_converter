@@ -1,10 +1,7 @@
 import click
 from pathlib import Path
 from typing import List, Optional, Dict, Any
-from loguru import logger
 from config import GeneratorConfig
-from c_converter.generators import CGenerator
-from c_converter.generators import PythonGenerator
 from c_parser import TypeManager,CTypeParser,CDataParser
 from utils.logger import logger 
 import json
@@ -64,7 +61,7 @@ def init_config(config_file: str, force: bool):
         logger.info(f"Created config file: {config_file}")
         
     except Exception as e:
-        logger.error(f"Failed to create config file: {e}")
+        logger.exception(f"Failed to create config file: {e}")
         raise click.ClickException(str(e))
 
 
@@ -87,7 +84,7 @@ def parse(header_file):
                 raise click.ClickException("未提供头文件且无法从缓存读取")
                 
     except Exception as e:
-        logger.error(f"解析失败: {e}")
+        logger.exception(f"解析失败: {e}")
         raise click.ClickException(str(e))
 
 @cli.command()
@@ -117,52 +114,27 @@ def analyze(source_file, header_file, output, format):
             raise click.ClickException("解析失败")
         
         # 格式化输出
-        if format == 'text':
-            formatted = _format_text_output(output_data)
-        else:
-            if format == 'json-simple':
-                output_data = _simplify_output(output_data)
-            formatted = json.dumps(output_data, indent=2, ensure_ascii=False)
+        if format == 'json-simple':
+            output_data = parser.get_simplified_output()
+        
+        formatted = json.dumps(output_data, indent=2, ensure_ascii=False)
             
         # 输出结果
         if output:
             Path(output).write_text(formatted, encoding='utf-8')
             click.echo(f"解析结果已保存到: {output}")
+
+            simple_output = Path(output).stem + "_simple.json"
+
+            parser.export_simplified_json(simple_output)
         else:
             click.echo(formatted)
             
     except Exception as e:
-        logger.error(f"解析失败: {e}")
+        logger.exception(f"解析失败: {e}")
         raise click.ClickException(str(e))
 
-def _format_text_output(data: Dict[str, Any]) -> str:
-    """格式化文本输出"""
-    lines = []
-    
-    for category, items in data.items():
-        lines.append(f"\n=== {category} ===")
-        for name, info in items.items():
-            lines.append(f"\n{name}:")
-            lines.extend(f"  {k}: {v}" for k, v in info.items())
-            
-    return '\n'.join(lines)
 
-def _simplify_output(data: Dict[str, Any]) -> Dict[str, Any]:
-    """简化输出数据"""
-    simplified = {}
-    
-    for category, items in data.items():
-        simplified[category] = {}
-        for name, info in items.items():
-            if isinstance(info, dict):
-                simplified[category][name] = {
-                    k: v for k, v in info.items()
-                    if k in {'type', 'size', 'value', 'fields'}
-                }
-            else:
-                simplified[category][name] = info
-                
-    return simplified
 
 if __name__ == '__main__':
     cli() 

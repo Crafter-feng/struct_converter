@@ -782,3 +782,113 @@ class CDataParser:
             'column': col
         }
     
+    def get_simplified_output(self) -> Dict[str, Any]:
+        """获取简化的输出数据，只包含核心字段
+        
+        Returns:
+            Dict[str, Any]: 简化的数据结构，包含：
+            - variables: 所有变量的简化信息（只包含name、type、array_size、parsed_value）
+        """
+        try:
+            # 获取完整数据
+            full_data = self.data_manager.get_all_data()
+            
+            # 构建简化的变量数据
+            simplified_variables = []
+            
+            # 处理结构体变量
+            for var in full_data.get('variables', {}).get('struct_vars', []):
+                simplified_var = self._create_simplified_variable(var)
+                if simplified_var:
+                    simplified_variables.append(simplified_var)
+            
+            # 处理数组变量
+            for var in full_data.get('variables', {}).get('array_vars', []):
+                simplified_var = self._create_simplified_variable(var)
+                if simplified_var:
+                    simplified_variables.append(simplified_var)
+            
+            # 处理指针变量
+            for var in full_data.get('variables', {}).get('pointer_vars', []):
+                simplified_var = self._create_simplified_variable(var)
+                if simplified_var:
+                    simplified_variables.append(simplified_var)
+            
+            # 处理普通变量
+            for var in full_data.get('variables', {}).get('variables', []):
+                simplified_var = self._create_simplified_variable(var)
+                if simplified_var:
+                    simplified_variables.append(simplified_var)
+            
+            result = {
+                'variables': simplified_variables
+            }
+            
+            logger.info(f"Generated simplified output with {len(simplified_variables)} variables")
+            return result
+            
+        except Exception as e:
+            logger.exception(f"Failed to generate simplified output: {e}")
+            raise
+    
+    def _create_simplified_variable(self, var: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """创建简化的变量信息，只包含核心字段
+        
+        Args:
+            var: 原始变量信息
+            
+        Returns:
+            Optional[Dict[str, Any]]: 简化的变量信息，只包含：
+            - name: 变量名
+            - type: 变量类型
+            - array_size: 数组维度
+            - parsed_value: 解析后的值
+        """
+        try:
+            if not var.get('name'):
+                return None
+                
+            simplified = {
+                'name': var['name'],
+                'type': var.get('type', ''),
+                'array_size': var.get('array_size', []),
+                'parsed_value': var.get('parsed_value')
+            }
+
+            if not simplified.get('array_size'):
+                del simplified['array_size']
+            
+            return simplified
+            
+        except Exception as e:
+            logger.warning(f"Failed to simplify variable {var.get('name', 'unknown')}: {e}")
+            return None
+    
+    def export_simplified_json(self, output_path: str = None) -> str:
+        """导出简化的JSON数据
+        
+        Args:
+            output_path: 输出文件路径，如果为None则返回JSON字符串
+            
+        Returns:
+            str: JSON字符串或文件路径
+        """
+        try:
+            simplified_data = self.get_simplified_output()
+            
+            if output_path:
+                # 写入文件
+                import json
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    json.dump(simplified_data, f, indent=2, ensure_ascii=False, default=str)
+                logger.info(f"Simplified data exported to: {output_path}")
+                return output_path
+            else:
+                # 返回JSON字符串
+                import json
+                return json.dumps(simplified_data, indent=2, ensure_ascii=False, default=str)
+                
+        except Exception as e:
+            logger.exception(f"Failed to export simplified JSON: {e}")
+            raise
+    
